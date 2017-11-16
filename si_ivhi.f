@@ -51,7 +51,8 @@ C     THIS CREATES HAVOC WITH TEXTRA
 C
 c     13-NOV-2017 : CALCULATING P(Q) VS Q
 c
-c
+c     14-NOV-2017 : IMPLEMENTING SCHIEBER'S VERSION OF SDE, IN THE
+C     PRESENCE OF IV AND HI.
 
 
 
@@ -286,34 +287,7 @@ C           Time integration: semi-implicit predictor-corrector scheme
                      TEMP23=(Q(2)*Q(2) - Q(3)*Q(3))
                      AVQ2(IOUT)=AVQ2(IOUT)+(QMAG)
                      ERQ2(IOUT)=ERQ2(IOUT)+(QMAG*QMAG)
-                     METD=(2.D0)*E*GEE3*SR*(Q(1)**(2.D0))*
-     &(Q(2)**(2.D0))/QMAG
-                     METE=((GEE3*Q(1)*Q(2))/(1.D0-(QMAG/B)))+
-     &(E*GEE4*Q(1)*Q(2)/QMAG)
-                     MET=METE+METD
-                     META=MET/SR
-
-                     MPSI1=((GEE3*TEMP12)/(1.D0-(QMAG/B)))+
-     &(2.D0*E*GEE3*SR*Q(1)*Q(2)*TEMP12/QMAG)+(E*GEE4*TEMP12/QMAG)
-                     MPSI1=(MPSI1)/(SR*SR)
-
-                     MPSI2=((GEE3*TEMP23)/(1.D0-(QMAG/B)))+
-     &(2.D0*E*GEE3*SR*Q(1)*Q(2)*TEMP23/QMAG)+(E*GEE4*TEMP23/QMAG)
-                     MPSI2=(MPSI2)/(SR*SR)
-
-                     AVTE(IOUT)=AVTE(IOUT)+METE
-                     ERTE(IOUT)=ERTE(IOUT)+(METE*METE)
-                     AVTD(IOUT)=AVTD(IOUT)+METD
-                     ERTD(IOUT)=ERTD(IOUT)+(METD*METD)
-                     AVT(IOUT)=AVT(IOUT)+MET
-                     ERT(IOUT)=ERT(IOUT)+(MET*MET)
-                     AVETA(IOUT)=AVETA(IOUT)+META
-                     ERETA(IOUT)=ERETA(IOUT) + (META*META)
-                     AVPSI1(IOUT)=AVPSI1(IOUT)+MPSI1
-                     ERPSI1(IOUT)=ERPSI1(IOUT)+(MPSI1*MPSI1)
-                     AVPSI2(IOUT)=AVPSI2(IOUT)+MPSI2
-                     ERPSI2(IOUT)=ERPSI2(IOUT)+(MPSI2*MPSI2)
-                 ENDIF
+                ENDIF
 10           CONTINUE 
 
 C             IF(IDT.EQ.NTIWID)THEN
@@ -338,37 +312,6 @@ C        Averages, statistical errors
              ERQ2(I)=ERQ2(I)/NTRAJ
              ERQ2(I)=(ERQ2(I)-AVQ2(I)*AVQ2(I))/(NTRAJ-1)
              ERQ2(I)=SQRT(ERQ2(I))
-
-             AVPSI1(I)=AVPSI1(I)/NTRAJ
-             ERPSI1(I)=ERPSI1(I)/NTRAJ
-             ERPSI1(I)=(ERPSI1(I)-AVPSI1(I)*AVPSI1(I))/(NTRAJ-1)
-             ERPSI1(I)=SQRT(ERPSI1(I))
-         
-             AVETA(I)=AVETA(I)/NTRAJ
-             ERETA(I)=ERETA(I)/NTRAJ
-             ERETA(I)=(ERETA(I)-AVETA(I)*AVETA(I))/(NTRAJ-1)
-             ERETA(I)=SQRT(ERETA(I))
-
-             AVPSI2(I)=AVPSI2(I)/NTRAJ
-             ERPSI2(I)=ERPSI2(I)/NTRAJ
-             ERPSI2(I)=(ERPSI2(I)-AVPSI2(I)*AVPSI2(I))/(NTRAJ-1)
-             ERPSI2(I)=SQRT(ERPSI2(I))
-
-             AVT(I)=AVT(I)/NTRAJ
-             ERT(I)=ERT(I)/NTRAJ
-             ERT(I)=(ERT(I)-AVT(I)*AVT(I))/(NTRAJ-1)
-             ERT(I)=SQRT(ERT(I))
-    
-             AVTD(I)=AVTD(I)/NTRAJ
-             ERTD(I)=ERTD(I)/NTRAJ
-             ERTD(I)=(ERTD(I)-AVTD(I)*AVTD(I))/(NTRAJ-1)
-             ERTD(I)=SQRT(ERTD(I))
-         
-             AVTE(I)=AVTE(I)/NTRAJ
-             ERTE(I)=ERTE(I)/NTRAJ
-             ERTE(I)=(ERTE(I)-AVTE(I)*AVTE(I))/(NTRAJ-1)
-             ERTE(I)=SQRT(ERTE(I))
-
 
              OUTIME1=NTIME*I*DELTAT
 c        Output of results 
@@ -914,7 +857,7 @@ c          WRITE(112,*) "IN RPY"
                   AUX2=(C43*COMPD)-(0.375D0*COMPD*COMPD)
                   AUX3=(0.125D0*COMPD*COMPD)
               ENDIF  
-              S=AUX3
+              S=0.5D0*(AUX3+AUX2)
           CASE DEFAULT
 c          WRITE(112,*) "NOPE"
               AUX1=Y
@@ -922,19 +865,14 @@ c          WRITE(112,*) "NOPE"
               AUX3=1.D0 
               S=1.D0
       END SELECT
-      RES=S-AUX3
-C     RES=S-B=A-r
       BETA=1.D0-(((ALPHA)/(Y1))*(AUX2+AUX3)) 
       AMPL2=(BETA)/((E*BETA)+1.D0)
       QALPH=(Y1)-(ALPHA*AUX2)
       GEE1=AMPL2*(((ALPHA*AUX3)/(BETA*QALPH))+E)
-      GEE2=2.D0*(((AMPL2*AMPL2*ALPHA*AUX3)/(BETA*BETA*Y))
-     &-(QALPH/Y)*GEE1 
-     &-(E*(AMPL2*AMPL2*ALPHA*(RES)/(BETA*BETA*Y)))
-     &-(E*ALPHA*(RES)*AMPL2/Y))
+      GEE2=2.D0*(((AMPL2*AMPL2*ALPHA*S)/(BETA*BETA*Y))-
+     &(QALPH/Y)*GEE1)
       GEE3=AMPL2/BETA
       GEE4=((2.D0*AMPL2*AMPL2*ALPHA*S)/(BETA*BETA*Y1))+(3.D0*AMPL2)
- 
       RETURN
       END
 

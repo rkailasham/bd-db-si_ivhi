@@ -48,11 +48,11 @@ c
 c     NOTE : WHEN RUNNING EQUILIBRIUM SIMULATIONS, DIVERT PROGRAM
 c     FLOW FROM ENTERING TEXTRA. WHEN SR=0.0, MATERIAL FUNCTIONS BECOME UNDEFINED.
 C     THIS CREATES HAVOC WITH TEXTRA
-c
-c     NOTE : PROGRAM IN DOUBLE PRECISION, READS FROM GAUSSIAN 
-c     INITIAL CONFIGURATIONS. TEXTRA BUILT IN.
-c
 C
+c     17-NOV-2017 : IMPLEMENTING GREEN-KUBO ANALYSIS
+c     THIS PROGRAMS READS INITIAL CONFIGS FROM A GAUSSIAN DISTRIBUTION
+c
+c
 c
 
 
@@ -73,6 +73,8 @@ c
       REAL*8 AVETA(NOUT),ERETA(NOUT)
       REAL*8 AVPSI1(NOUT),ERPSI1(NOUT)
       REAL*8 AVPSI2(NOUT),ERPSI2(NOUT)
+      REAL*8 AVGP(NOUT),MEGP,ERGP(NOUT)
+      REAL*8 AVGP0,ERGP0,MEGP0
       REAL*8 DTARR(10) 
       REAL*8 XARR(NDATM),YARR(NDATM),SIGARR(NDATM) 
       REAL*8 TEMP1(NDATM, NOUT),TEMP2(NDATM, NOUT),TEMP3(NDATM, NOUT)
@@ -104,9 +106,10 @@ C     THI = 2 FOR ROTNE-PRAGER-YAMAKAWA
       open (unit=8, file='tau.dat',STATUS='UNKNOWN')
       open (unit=9, file='tau_e.dat',STATUS='UNKNOWN')
       open (unit=10, file='tau_d.dat',STATUS='UNKNOWN')
-c      open (unit=112,file='log.dat',STATUS='UNKNOWN')
-C      open (unit=113, file='eqbconfigs150DT.dat',STATUS='UNKNOWN')
-c      OPEN (UNIT=89, file='bin_data.dat',STATUS='UNKNOWN')
+      OPEN (unit=11, file='gp.dat', STATUS='UNKNOWN')
+      open (unit=112,file='gp0.dat',STATUS='UNKNOWN')
+
+
 
       TMAX=10.D0
       READ (2,*) NTIWID, NTRAJ
@@ -202,8 +205,11 @@ C     -ESPONDING MATL. FNS.
              ERPSI1(I)=0.D0
              AVPSI2(I)=0.D0
              ERPSI2(I)=0.D0
+             AVGP(I)=0.D0
+             ERGP(I)=0.D0
 25       CONTINUE
-
+         AVGP0=0.D0
+         ERGP0=0.D0             
 
 
 
@@ -247,6 +253,20 @@ C            Relaxation of initial conditions
                 CALL SEMIMP(Q)
 50           CONTINUE
 C 
+
+c            CALCULATIING SXY0 HERE
+             QMAG =Q(1)*Q(1) + Q(2)*Q(2) + Q(3)*Q(3)
+             METD=(2.D0)*E*GEE3*SR*(Q(1)**(2.D0))*
+     &(Q(2)**(2.D0))/QMAG
+             METE=((GEE3*Q(1)*Q(2))/(1.D0-(QMAG/B)))+
+     &(E*GEE4*Q(1)*Q(2)/QMAG)
+             MET=METE+METD
+
+             SXY0=MET
+             MEGP0=(SXY0*SXY0)
+             AVGP0=AVGP0+MEGP0
+             ERGP0=ERGP0+(MEGP0*MEGP0)
+
              SR=SRTEMP
              SRDT=SR*DELTAT
              SRDTH=0.5D0*SRDT
@@ -272,29 +292,15 @@ C           Time integration: semi-implicit predictor-corrector scheme
                      METE=((GEE3*Q(1)*Q(2))/(1.D0-(QMAG/B)))+
      &(E*GEE4*Q(1)*Q(2)/QMAG)
                      MET=METE+METD
-                     META=MET/SR
+                     MEGP=MET*SXY0
 
-                     MPSI1=((GEE3*TEMP12)/(1.D0-(QMAG/B)))+
-     &(2.D0*E*GEE3*SR*Q(1)*Q(2)*TEMP12/QMAG)+(E*GEE4*TEMP12/QMAG)
-                     MPSI1=(MPSI1)/(SR*SR)
-
-                     MPSI2=((GEE3*TEMP23)/(1.D0-(QMAG/B)))+
-     &(2.D0*E*GEE3*SR*Q(1)*Q(2)*TEMP23/QMAG)+(E*GEE4*TEMP23/QMAG)
-                     MPSI2=(MPSI2)/(SR*SR)
-
-                     AVTE(IOUT)=AVTE(IOUT)+METE
-                     ERTE(IOUT)=ERTE(IOUT)+(METE*METE)
-                     AVTD(IOUT)=AVTD(IOUT)+METD
-                     ERTD(IOUT)=ERTD(IOUT)+(METD*METD)
                      AVT(IOUT)=AVT(IOUT)+MET
                      ERT(IOUT)=ERT(IOUT)+(MET*MET)
-                     AVETA(IOUT)=AVETA(IOUT)+META
-                     ERETA(IOUT)=ERETA(IOUT) + (META*META)
-                     AVPSI1(IOUT)=AVPSI1(IOUT)+MPSI1
-                     ERPSI1(IOUT)=ERPSI1(IOUT)+(MPSI1*MPSI1)
-                     AVPSI2(IOUT)=AVPSI2(IOUT)+MPSI2
-                     ERPSI2(IOUT)=ERPSI2(IOUT)+(MPSI2*MPSI2)
-                 ENDIF
+
+                     AVGP(IOUT)=AVGP(IOUT)+MEGP
+                     ERGP(IOUT)=ERGP(IOUT)+MEGP*MEGP
+
+                ENDIF
 10           CONTINUE 
 
 C             IF(IDT.EQ.NTIWID)THEN
@@ -307,56 +313,35 @@ C        Averages, statistical errors
 
          DO 35 I=1,NOUT
 
+             AVGP(I)=AVGP(I)/NTRAJ
+             ERGP(I)=ERGP(I)/NTRAJ
+             ERGP(I)=(ERGP(I)-AVGP(I)*AVGP(I))/(NTRAJ-1)
+             ERGP(I)=SQRT(ERGP(I))
+
              AVQ2(I)=AVQ2(I)/NTRAJ
              ERQ2(I)=ERQ2(I)/NTRAJ
              ERQ2(I)=(ERQ2(I)-AVQ2(I)*AVQ2(I))/(NTRAJ-1)
              ERQ2(I)=SQRT(ERQ2(I))
-
-             AVPSI1(I)=AVPSI1(I)/NTRAJ
-             ERPSI1(I)=ERPSI1(I)/NTRAJ
-             ERPSI1(I)=(ERPSI1(I)-AVPSI1(I)*AVPSI1(I))/(NTRAJ-1)
-             ERPSI1(I)=SQRT(ERPSI1(I))
-         
-             AVETA(I)=AVETA(I)/NTRAJ
-             ERETA(I)=ERETA(I)/NTRAJ
-             ERETA(I)=(ERETA(I)-AVETA(I)*AVETA(I))/(NTRAJ-1)
-             ERETA(I)=SQRT(ERETA(I))
-
-             AVPSI2(I)=AVPSI2(I)/NTRAJ
-             ERPSI2(I)=ERPSI2(I)/NTRAJ
-             ERPSI2(I)=(ERPSI2(I)-AVPSI2(I)*AVPSI2(I))/(NTRAJ-1)
-             ERPSI2(I)=SQRT(ERPSI2(I))
 
              AVT(I)=AVT(I)/NTRAJ
              ERT(I)=ERT(I)/NTRAJ
              ERT(I)=(ERT(I)-AVT(I)*AVT(I))/(NTRAJ-1)
              ERT(I)=SQRT(ERT(I))
     
-             AVTD(I)=AVTD(I)/NTRAJ
-             ERTD(I)=ERTD(I)/NTRAJ
-             ERTD(I)=(ERTD(I)-AVTD(I)*AVTD(I))/(NTRAJ-1)
-             ERTD(I)=SQRT(ERTD(I))
-         
-             AVTE(I)=AVTE(I)/NTRAJ
-             ERTE(I)=ERTE(I)/NTRAJ
-             ERTE(I)=(ERTE(I)-AVTE(I)*AVTE(I))/(NTRAJ-1)
-             ERTE(I)=SQRT(ERTE(I))
-
-
              OUTIME1=NTIME*I*DELTAT
 c        Output of results 
-             WRITE(3,4) DELTAT,OUTIME1,AVETA(I),ERETA(I)
-             WRITE(4,4) DELTAT,OUTIME1,AVPSI1(I),ERPSI1(I)
-             WRITE(5,4) DELTAT,OUTIME1,AVPSI2(I),ERPSI2(I)
              WRITE(7,4)  DELTAT,OUTIME1,AVQ2(I),ERQ2(I)
-c             WRITE(7,*)  DELTAT,OUTIME,AVQ2(I),ERQ2(I),SIGSQ(I) 
              WRITE(8,4)  DELTAT,OUTIME1,AVT(I),ERT(I)
-c             WRITE(*,1)  DELTAT,OUTIME,AVT(I),ERT(I)
-             WRITE(9,4)  DELTAT,OUTIME1,AVTE(I),ERTE(I)
-             WRITE(10,4) DELTAT,OUTIME1,AVTD(I),ERTD(I)
+             WRITE(11,4) DELTAT,OUTIME1,AVGP(I),ERGP(I)
 35       CONTINUE
 c1        FORMAT(F11.8,4X,F6.2,2X,F16.5,2X,F16.5)
 4        FORMAT(F11.8,4X,F10.5,4X,F24.12,4X,F24.12) 
+         AVGP0=AVGP0/NTRAJ
+         ERGP0=ERGP0/NTRAJ
+         ERGP0=(ERGP0-AVGP0*AVGP0)/(NTRAJ-1)
+         ERGP0=SQRT(ERGP0)
+         WRITE(112,1) DELTAT,0.D0,AVGP0,ERGP0
+
 1000  CONTINUE 
 C 
 
@@ -379,50 +364,44 @@ C
       CLOSE (UNIT=8)
       CLOSE (UNIT=9)
       CLOSE (UNIT=10)
+      CLOSE (UNIT=11)
       CLOSE (UNIT=89)
       CLOSE (UNIT=112)
 c1100  STOP
 
 C 
-      open (unit=15, file='q2.dat')
-      open (unit=16, file='psi1.dat')
-      open (unit=17, file='eta.dat')
-      open (unit=18, file='psi2.dat')
+      open (unit=17, file='q2.dat')
+      open (unit=15, file='gp.dat')
+      open (unit=16, file='gp0.dat')
       open (unit=19, file='tau.dat')
-      open (unit=20, file='tau_d.dat')
-      open (unit=21, file='tau_e.dat')
+
+      open (unit=9,  file='q2x.dat',status='UNKNOWN') 
+      open (unit=23, file='gpx.dat',status='UNKNOWN')
+      open (unit=24, file='gp0x.dat',status='UNKNOWN')
+      open (unit=44, file='taux.dat',status='UNKNOWN')
 
       open (unit=2, file='tstep.dat')
       open (unit=1, file='inp.dat')
-
-      open (unit=40, file='q2x.dat',status='UNKNOWN')
-      open (unit=41, file='psi1x.dat',status='UNKNOWN')
-      open (unit=42, file='etax.dat',status='UNKNOWN')
-      open (unit=43, file='psi2x.dat',status='UNKNOWN')
-      open (unit=44, file='taux.dat',status='UNKNOWN')
-      open (unit=45, file='tau_dx.dat',status='UNKNOWN')
-      open (unit=46, file='tau_ex.dat',status='UNKNOWN')
-
       READ (1,*) Z,RMU,B,SR,E,H0,THI 
       READ (2,*) NTIWID, NTRAJ
 
-1     FORMAT(F11.8,4X,F8.4,4X,F16.12,4X,F16.12)
+1     FORMAT(F11.8,4X,F10.5,4X,F24.12,4X,F24.12)
 2     FORMAT(2X,F7.3,3X,F7.3,3X,F5.2,4X,F8.4,4X,F16.5,4X,F16.5,
      &4X,I3,3X,I3,A4,I3,3X,F10.5,A4,F10.5)
+
+
 
 C     EXTRAPOLATION TO ZERO STEP SIZE 
       DELTAT=0.D0
       IFLAG=0
 C 
  
+
 c     Q2 VALUES
 
       DO 31 J=1,NTIWID
         DO 31 I=1,NOUT
-c         write(*,*) I,J
-         READ(15,*) TEMP1(J,I),OUTIME(I),TEMP2(J,I),TEMP3(J,I)
-c         WRITE(*,*) TEMP1(J,I),OUTIME(I),TEMP2(J,I),TEMP3(J,I)
-
+         READ(17,1) TEMP1(J,I),OUTIME(I),TEMP2(J,I),TEMP3(J,I)
 31    CONTINUE
 
       DO 33 I=1,NOUT
@@ -430,8 +409,8 @@ c         WRITE(*,*) TEMP1(J,I),OUTIME(I),TEMP2(J,I),TEMP3(J,I)
           XARR(J)=TEMP1(J,I)
           YARR(J)=TEMP2(J,I)
           SIGARR(J)=TEMP3(J,I)
-c          write(*,*) XARR(J),YARR(J),SIGARR(J)
 34    CONTINUE
+C
 C     IF NOPT=-1, TEXTRA HAS NOT BEEN ABLE TO EXTRAPOLATE.
 C     IN SUCH A CASE, THE ERRLEV PARAMETER IS REDUCED 10 TIMES
 C     AND THE EXTRAPOLATION IS REPEATED. IF, EVEN AFTER 6 TIMES
@@ -456,66 +435,14 @@ C
          ALIOPT=0.D0
          VLIOPT=0.D0
       ENDIF
-      WRITE (40,2) Z, RMU, H0, OUTIME(I), YOPT, SIGOPT, NOPT, NDUOPT,
+      WRITE (9,2) Z, RMU, H0, OUTIME(I), YOPT, SIGOPT, NOPT, NDUOPT,
      &' of ', NTIWID, ALIOPT,' +- ',VLIOPT
 33    CONTINUE
 
-c1100  STOP 
-
-
-
-C    FIRST NORMAL STRESS DIFFERENCE
-      DO 41 J=1,NTIWID
-        DO 41 I=1,NOUT
-c         write(*,*) I,J
-         READ(16,*) TEMP1(J,I),OUTIME(I),TEMP2(J,I),TEMP3(J,I)
-c         WRITE(*,*) TEMP1(J,I),OUTIME(I),TEMP2(J,I),TEMP3(J,I)
-
-41    CONTINUE
-
-      DO 43 I=1,NOUT
-        DO 44 J=1,NTIWID
-          XARR(J)=TEMP1(J,I)
-          YARR(J)=TEMP2(J,I)
-          SIGARR(J)=TEMP3(J,I)
-44    CONTINUE
-C     IF NOPT=-1, TEXTRA HAS NOT BEEN ABLE TO EXTRAPOLATE.
-C     IN SUCH A CASE, THE ERRLEV PARAMETER IS REDUCED 10 TIMES
-C     AND THE EXTRAPOLATION IS REPEATED. IF, EVEN AFTER 6 TIMES
-C     THE RESULT IS THE SAME, ALL VALUES ARE REPORTED AS 0.0
-C
-      NOPT = -1
-      ERRLEV = 0.25D0
-      DO 42 WHILE ((NOPT.EQ.-1).AND.(ERRLEV.GT.0.0000025D0))
-        CALL TEXTRA(XARR,YARR,SIGARR,NTIWID,NDATM,IFLAG,ERRLEV)
-        ERRLEV = ERRLEV/10.D0
-42    CONTINUE
-      IF(NOPT.EQ.-1) THEN
-         YOPT=0.D0
-         SIGOPT=0.D0
-         NOPT=0
-         NDUOPT=0
-         XOPT=0
-         ALIOPT=0.D0
-         VLIOPT=0.D0
-      ENDIF
-      IF(IFLAG.EQ.0) THEN
-         ALIOPT=0.D0
-         VLIOPT=0.D0
-      ENDIF
-      WRITE (41,2) Z, RMU, H0, OUTIME(I), YOPT, SIGOPT, NOPT, NDUOPT,
-     &' of ', NTIWID, ALIOPT,' +- ',VLIOPT
-43    CONTINUE
-
-
-C     VISCOSITY
-
+C     MODULUS 
       DO 51 J=1,NTIWID
         DO 51 I=1,NOUT
-c         write(*,*) I,J
-         READ(17,*) TEMP1(J,I),OUTIME(I),TEMP2(J,I),TEMP3(J,I)
-c         WRITE(*,*) TEMP1(J,I),OUTIME(I),TEMP2(J,I),TEMP3(J,I)
-
+         READ(15,1) TEMP1(J,I),OUTIME(I),TEMP2(J,I),TEMP3(J,I)
 51    CONTINUE
 
       DO 53 I=1,NOUT
@@ -524,6 +451,7 @@ c         WRITE(*,*) TEMP1(J,I),OUTIME(I),TEMP2(J,I),TEMP3(J,I)
           YARR(J)=TEMP2(J,I)
           SIGARR(J)=TEMP3(J,I)
 54    CONTINUE
+C
 C     IF NOPT=-1, TEXTRA HAS NOT BEEN ABLE TO EXTRAPOLATE.
 C     IN SUCH A CASE, THE ERRLEV PARAMETER IS REDUCED 10 TIMES
 C     AND THE EXTRAPOLATION IS REPEATED. IF, EVEN AFTER 6 TIMES
@@ -531,7 +459,7 @@ C     THE RESULT IS THE SAME, ALL VALUES ARE REPORTED AS 0.0
 C
       NOPT = -1
       ERRLEV = 0.25D0
-      DO 52 WHILE ((NOPT.EQ.-1).AND.(ERRLEV.GT.0.0000025))
+      DO 52 WHILE ((NOPT.EQ.-1).AND.(ERRLEV.GT.0.0000025D0))
         CALL TEXTRA(XARR,YARR,SIGARR,NTIWID,NDATM,IFLAG,ERRLEV)
         ERRLEV = ERRLEV/10.D0
 52    CONTINUE
@@ -548,27 +476,24 @@ C
          ALIOPT=0.D0
          VLIOPT=0.D0
       ENDIF
-      WRITE (42,2) Z, RMU, H0, OUTIME(I), YOPT, SIGOPT, NOPT, NDUOPT,
+      WRITE (23,2) Z, RMU, H0, OUTIME(I), YOPT, SIGOPT, NOPT, NDUOPT,
      &' of ', NTIWID, ALIOPT,' +- ',VLIOPT
 53    CONTINUE
 
-
-C     SECOND NORMAL STRESS DIFFERENCE
-
+C     GP0, SPECIAL CASE, NOUT1=1 
+      NOUT1=1
       DO 61 J=1,NTIWID
-        DO 61 I=1,NOUT
-c         write(*,*) I,J
-         READ(18,*) TEMP1(J,I),OUTIME(I),TEMP2(J,I),TEMP3(J,I)
-c         WRITE(*,*) TEMP1(J,I),OUTIME(I),TEMP2(J,I),TEMP3(J,I)
-
+        DO 61 I=1,NOUT1
+         READ(16,1) TEMP1(J,I),OUTIME(I),TEMP2(J,I),TEMP3(J,I)
 61    CONTINUE
 
-      DO 63 I=1,NOUT
+      DO 63 I=1,NOUT1
         DO 64 J=1,NTIWID
           XARR(J)=TEMP1(J,I)
           YARR(J)=TEMP2(J,I)
           SIGARR(J)=TEMP3(J,I)
 64    CONTINUE
+C
 C     IF NOPT=-1, TEXTRA HAS NOT BEEN ABLE TO EXTRAPOLATE.
 C     IN SUCH A CASE, THE ERRLEV PARAMETER IS REDUCED 10 TIMES
 C     AND THE EXTRAPOLATION IS REPEATED. IF, EVEN AFTER 6 TIMES
@@ -593,9 +518,14 @@ C
          ALIOPT=0.D0
          VLIOPT=0.D0
       ENDIF
-      WRITE (43,2) Z, RMU, H0, OUTIME(I), YOPT, SIGOPT, NOPT, NDUOPT,
+      WRITE (24,2) Z, RMU, H0, OUTIME(I), YOPT, SIGOPT, NOPT, NDUOPT,
      &' of ', NTIWID, ALIOPT,' +- ',VLIOPT
 63    CONTINUE
+
+
+
+
+
 
 C     TAU (XY COMPONENT OF STRESS TENSOR)
 
@@ -642,177 +572,19 @@ C
 73    CONTINUE
 
 
-C     TAU_E (ELASTIC COMPONENT OF TAU)
-
-      DO 91 J=1,NTIWID
-        DO 91 I=1,NOUT
-c         write(*,*) I,J
-         READ(21,*) TEMP1(J,I),OUTIME(I),TEMP2(J,I),TEMP3(J,I)
-c         WRITE(*,*) TEMP1(J,I),OUTIME(I),TEMP2(J,I),TEMP3(J,I)
-
-91    CONTINUE
-
-      DO 93 I=1,NOUT
-        DO 94 J=1,NTIWID
-          XARR(J)=TEMP1(J,I)
-          YARR(J)=TEMP2(J,I)
-          SIGARR(J)=TEMP3(J,I)
-94    CONTINUE
-C     IF NOPT=-1, TEXTRA HAS NOT BEEN ABLE TO EXTRAPOLATE.
-C     IN SUCH A CASE, THE ERRLEV PARAMETER IS REDUCED 10 TIMES
-C     AND THE EXTRAPOLATION IS REPEATED. IF, EVEN AFTER 6 TIMES
-C     THE RESULT IS THE SAME, ALL VALUES ARE REPORTED AS 0.0
-C
-      NOPT = -1
-      ERRLEV = 0.25D0
-      DO 92 WHILE ((NOPT.EQ.-1).AND.(ERRLEV.GT.0.0000025D0))
-        CALL TEXTRA(XARR,YARR,SIGARR,NTIWID,NDATM,IFLAG,ERRLEV)
-        ERRLEV = ERRLEV/10.D0
-92    CONTINUE
-      IF(NOPT.EQ.-1) THEN
-         YOPT=0.D0
-         SIGOPT=0.D0
-         NOPT=0
-         NDUOPT=0
-         XOPT=0
-         ALIOPT=0.D0
-         VLIOPT=0.D0
-      ENDIF
-      IF(IFLAG.EQ.0) THEN
-         ALIOPT=0.D0
-         VLIOPT=0.D0
-      ENDIF
-      WRITE (46,2) Z, RMU, H0, OUTIME(I), YOPT, SIGOPT, NOPT, NDUOPT,
-     &' of ', NTIWID, ALIOPT,' +- ',VLIOPT
-93    CONTINUE
-
-C    TAU_D (DISSIPATIVE COMPONENT OF TAU)
-
-      DO 81 J=1,NTIWID
-        DO 81 I=1,NOUT
-c         write(*,*) I,J
-         READ(20,*) TEMP1(J,I),OUTIME(I),TEMP2(J,I),TEMP3(J,I)
-c         WRITE(*,*) TEMP1(J,I),OUTIME(I),TEMP2(J,I),TEMP3(J,I)
-
-81    CONTINUE
-
-      DO 83 I=1,NOUT
-        DO 84 J=1,NTIWID
-          XARR(J)=TEMP1(J,I)
-          YARR(J)=TEMP2(J,I)
-          SIGARR(J)=TEMP3(J,I)
-84    CONTINUE
-C     IF NOPT=-1, TEXTRA HAS NOT BEEN ABLE TO EXTRAPOLATE.
-C     IN SUCH A CASE, THE ERRLEV PARAMETER IS REDUCED 10 TIMES
-C     AND THE EXTRAPOLATION IS REPEATED. IF, EVEN AFTER 6 TIMES
-C     THE RESULT IS THE SAME, ALL VALUES ARE REPORTED AS 0.0
-C
-      NOPT = -1
-      ERRLEV = 0.25D0
-      DO 82 WHILE ((NOPT.EQ.-1).AND.(ERRLEV.GT.0.0000025D0))
-        CALL TEXTRA(XARR,YARR,SIGARR,NTIWID,NDATM,IFLAG,ERRLEV)
-        ERRLEV = ERRLEV/10.D0
-82    CONTINUE
-      IF(NOPT.EQ.-1) THEN
-         YOPT=0.D0
-         SIGOPT=0.D0
-         NOPT=0
-         NDUOPT=0
-         XOPT=0
-         ALIOPT=0.D0
-         VLIOPT=0.D0
-      ENDIF
-      IF(IFLAG.EQ.0) THEN
-         ALIOPT=0.D0
-         VLIOPT=0.D0
-      ENDIF
-      WRITE (45,2) Z, RMU, H0, OUTIME(I), YOPT, SIGOPT, NOPT, NDUOPT,
-     &' of ', NTIWID, ALIOPT,' +- ',VLIOPT
-83    CONTINUE
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
       close (unit=15)
       close (unit=16)
       close (unit=17)
-      close (unit=18)
       close (unit=19)
-      close (unit=20)
-      close (unit=21)
 
-      close (unit=40)
-      close (unit=41)
-      close (unit=42)
-      close (unit=43)
+      close (unit=9)
+      close (unit=23)
+      close (unit=24)
       close (unit=44)
-      close (unit=45)
-      close (unit=46)
 
       close (unit=1)
       close (unit=2)
-
-
-
 
 1100  STOP 
 

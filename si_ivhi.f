@@ -49,13 +49,28 @@ c     NOTE : WHEN RUNNING EQUILIBRIUM SIMULATIONS, DIVERT PROGRAM
 c     FLOW FROM ENTERING TEXTRA. WHEN SR=0.0, MATERIAL FUNCTIONS BECOME UNDEFINED.
 C     THIS CREATES HAVOC WITH TEXTRA
 C
+c     15-NOV-2017 : MODIFYING CODE SO THAT IT ACCEPTS INITIAL CONDITIONS FROM A
+C     DATABASE OF EQUILIBRATED FENE DUMBBELL CONFIGURATIONS
+C
+c     NOTE : FPATH CONTAINS THE FULL PATH TO eqbconfigs.dat WHICH CONTAINS THE 
+c     EQUILIBRATED CONFIGURATIONS. CHANGE THE PATH NAME BY CHANGING FPATH
 c
+C     16-NOV-2017 : TRYING TO IMPLEMENT RANDOM ACCESS OF eqbconfigs.dat.
+c     DEFAULT IS SEQUENTIAL ACCESS
+c
+c     17-NOV-2017 : IMPLEMENTED RANDOM ACCESS BY LOADING DATABSE ON TO AN 
+c     ARRAY. PROGRAM EXECUTION OVERHEAD OF 30s.
+c     CHANGE FPATH ACCORDING TO PLATFORM
+c
+c
+
 
 
 
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
       PARAMETER (NDATM=50,NOUT=100) 
       PARAMETER (NBINS=50)
+      PARAMETER (NDB=10000000)
       REAL*8 FENFAC,TEMPB
       REAL*8 MPSI1,MPSI2
       REAL*8 AQ2,MQ2,VQ2
@@ -74,13 +89,17 @@ c
       REAL*8 TEMP1(NDATM, NOUT),TEMP2(NDATM, NOUT),TEMP3(NDATM, NOUT)
       REAL*8 OUTIME(NOUT)
       REAL*8 Q(3)
+      REAL*8 DB(NDB,3)
       INTEGER NTIARR(10) 
       INTEGER TIME (8)
       CHARACTER (LEN=12) CLK(3)
+      CHARACTER (LEN=512) FPATH
+      PARAMETER(FPATH="/short/g16/rka565/eqbconfigs.dat")
       COMMON /STEPBL/ THI,B,ZMU,RMU2,BAUXQ,BAUXR,DTH,DTQ,SRDT,
      &SRDTH,C1P,C2P,E,AMPL2,BETA,AB,A2,A4,AUX1,AUX2,
      &AUX3,AUX4,AUX5,S,QALPH,GEE1,GEE2,GEE3,GEE4 
       COMMON /EXTRP/ NOPT,NDUOPT,XOPT,YOPT,SIGOPT,ALIOPT,VLIOPT 
+      LOGICAL THERE
 c      INTEGER :: THI
 C     Excluded-volume and FENE parameters 
 c     Z = Solvent Quality, RMU = EV parameter, B= FENE parameter
@@ -100,6 +119,7 @@ C     THI = 2 FOR ROTNE-PRAGER-YAMAKAWA
       open (unit=8, file='tau.dat',STATUS='UNKNOWN')
       open (unit=9, file='tau_e.dat',STATUS='UNKNOWN')
       open (unit=10, file='tau_d.dat',STATUS='UNKNOWN')
+      INQUIRE (FILE=FPATH,EXIST=THERE)
 c      open (unit=112,file='log.dat',STATUS='UNKNOWN')
 C      open (unit=113, file='eqbconfigs150DT.dat',STATUS='UNKNOWN')
 c      OPEN (UNIT=89, file='bin_data.dat',STATUS='UNKNOWN')
@@ -162,10 +182,31 @@ c      WRITE(*,*) "TEMPB , PREFAC : ",TEMPB, FENFAC
 c      WRITE(*,*) "AMPL2 : ",AMPL2
 C     Loop for different time step widths 
       ISEED=20171113
+      NSEED=ISEED+1
+      CALL SRAND(NSEED)
       CALL CPU_TIME(STARTTIME)
 
+      IF(THERE)THEN
+          OPEN(UNIT=114,file=FPATH)
+          WRITE(*,*) "LOADING DATABASE.."
+          DO 12 I=1,NDB
+              READ(114,8) K,DB(I,1),DB(I,2),DB(I,3)
+12        CONTINUE
+          CLOSE(UNIT=114)
+      ELSE
+          STOP "eqbconfigs.dat file not found. Execution terminated" 
+      ENDIF
+
+8     FORMAT(I10,4X,F20.16,4X,F20.16,4X,F20.16)
+
+      WRITE(*,*) "LOADED DATABASE"
+
+
+
+c      CALL CPU_TIME(STARTTIME)
       DO 1000 IDT=1,NTIWID
 C        Auxiliary parameters 
+c         OPEN(UNIT=114,file=FPATH)
          WRITE(*,*) "DOING TIMESTEP WIDTH : ",DTARR(IDT)
          DELTAT=DTARR(IDT) 
          TEMPDT=DELTAT
@@ -222,15 +263,20 @@ C        write (*,*) ISEED
              SR=0.D0
              SRDT=SR*DELTAT
              SRDTH=0.5D0*SRDT
-C            Gaussian distributed initial conditions  
-             Q(1)=RANGLS()
-             Q(2)=RANGLS()
-             Q(3)=RANGLS()
 
-c             Q(1)=FENGEN()
-c             Q(2)=FENGEN()
-c             Q(3)=FENGEN()
-C
+C            Initial conditions taken from memory  
+c             READ(114,8) J,Q(1),Q(2),Q(3)
+
+C              
+             PICK=RAND()
+             NSEED=NSEED+1
+             CHANGE=NDB*PICK
+             NCHOOSE=NINT(CHANGE)
+             Q(1)=DB(NCHOOSE,1)
+             Q(2)=DB(NCHOOSE,2)
+             Q(3)=DB(NCHOOSE,3)
+
+
 
              IF(MODULO(ITRAJ,1000).EQ.0)THEN
              WRITE(*,*) "STATUS : EQB.TIME-STEP WIDTH : ",DELTAT,
@@ -353,6 +399,7 @@ c             WRITE(*,1)  DELTAT,OUTIME,AVT(I),ERT(I)
 35       CONTINUE
 c1        FORMAT(F11.8,4X,F6.2,2X,F16.5,2X,F16.5)
 4        FORMAT(F11.8,4X,F10.5,4X,F24.12,4X,F24.12) 
+c         CLOSE(UNIT=114)
 1000  CONTINUE 
 C 
 
@@ -377,6 +424,7 @@ C
       CLOSE (UNIT=10)
       CLOSE (UNIT=89)
       CLOSE (UNIT=112)
+C      CLOSE (UNIT=114)
 c1100  STOP
 
 C 

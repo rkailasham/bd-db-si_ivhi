@@ -49,13 +49,18 @@ c     NOTE : WHEN RUNNING EQUILIBRIUM SIMULATIONS, DIVERT PROGRAM
 c     FLOW FROM ENTERING TEXTRA. WHEN SR=0.0, MATERIAL FUNCTIONS BECOME UNDEFINED.
 C     THIS CREATES HAVOC WITH TEXTRA
 C
+c     13-NOV-2017 : CALCULATING P(Q) VS Q
 c
+c
+
 
 
 
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
       PARAMETER (NDATM=50,NOUT=100) 
       PARAMETER (NBINS=50)
+      REAL*8 P(NBINS)
+      REAL*8 BSIZE 
       REAL*8 FENFAC,TEMPB
       REAL*8 MPSI1,MPSI2
       REAL*8 AQ2,MQ2,VQ2
@@ -102,7 +107,7 @@ C     THI = 2 FOR ROTNE-PRAGER-YAMAKAWA
       open (unit=10, file='tau_d.dat',STATUS='UNKNOWN')
 c      open (unit=112,file='log.dat',STATUS='UNKNOWN')
 C      open (unit=113, file='eqbconfigs150DT.dat',STATUS='UNKNOWN')
-c      OPEN (UNIT=89, file='bin_data.dat',STATUS='UNKNOWN')
+      OPEN (UNIT=89, file='bin_data.dat',STATUS='UNKNOWN')
 
       TMAX=10.D0
       READ (2,*) NTIWID, NTRAJ
@@ -110,6 +115,24 @@ c      OPEN (UNIT=89, file='bin_data.dat',STATUS='UNKNOWN')
           READ (2,*) NTIARR(I)
           DTARR(I)=TMAX/NTIARR(I)
 15    CONTINUE
+
+
+c     Histogramming Portion
+      POSI=0.D0
+      POSF=5.D0
+      BSIZE=(POSF-POSI)/NBINS
+
+      DO 22 I=1,NBINS
+          P(I)=0.D0
+22    CONTINUE
+
+
+
+
+
+
+
+
 
 C 
       ZMU=Z/RMU**(5.D0) 
@@ -119,22 +142,22 @@ C
 C 
       SELECT CASE (NTHI)
           CASE (1)
-              WRITE(*,*) "THI : ",THI
-              WRITE(*,*) "TYPE OF HI : ROBT"
+c              WRITE(*,*) "THI : ",THI
+c              WRITE(*,*) "TYPE OF HI : ROBT"
               IF(H0.EQ.0) THEN
-                  WRITE(*,*) "H0=0; SETTING THI=3"
+c                  WRITE(*,*) "H0=0; SETTING THI=3"
                   THI=3.D0
               ENDIF
           CASE (2)
-              WRITE(*,*) "THI : ",THI
-              WRITE(*,*) "TYPE OF HI : RPY"
+c             WRITE(*,*) "THI : ",THI
+c             WRITE(*,*) "TYPE OF HI : RPY"
               IF(H0.EQ.0) THEN
-                  WRITE(*,*) "H0=0; SETTING THI=3"
+c                  WRITE(*,*) "H0=0; SETTING THI=3"
                   THI=3.D0
               ENDIF
           CASE DEFAULT
-              WRITE(*,*) "HI OPTION NOT VALID"
-              WRITE(*,*) "SETTING H0=0.0"
+c              WRITE(*,*) "HI OPTION NOT VALID"
+c              WRITE(*,*) "SETTING H0=0.0"
               H0=0.D0
       END SELECT
 
@@ -143,8 +166,8 @@ C
       A2=AB*AB
       A4=A2*A2
 45    FORMAT(F20.16)
-      WRITE(*,45) E
-      WRITE(*,45) H0
+c      WRITE(*,45) E
+c      WRITE(*,45) H0
 
 
 c1100  STOP
@@ -166,7 +189,7 @@ C     Loop for different time step widths
 
       DO 1000 IDT=1,NTIWID
 C        Auxiliary parameters 
-         WRITE(*,*) "DOING TIMESTEP WIDTH : ",DTARR(IDT)
+c         WRITE(*,*) "DOING TIMESTEP WIDTH : ",DTARR(IDT)
          DELTAT=DTARR(IDT) 
          TEMPDT=DELTAT
          NTIME=NTIARR(IDT)/NOUT
@@ -211,10 +234,10 @@ C     -ESPONDING MATL. FNS.
 C        A FRESH SEED IS GIVEN FOR EACH TIME-STEP WIDTH
 C        TO ENSURE NON-OCCURENCE OF PERIOD EXHAUSTION
 
-c         CALL DATE_AND_TIME(CLK(1),CLK(2),CLK(3),TIME)
-c         ISEED=TIME(8)*100000+TIME(7)*1000+TIME(6)*10+TIME(5)
+         CALL DATE_AND_TIME(CLK(1),CLK(2),CLK(3),TIME)
+         ISEED=TIME(8)*100000+TIME(7)*1000+TIME(6)*10+TIME(5)
 C        write (*,*) ISEED 
-         ISEED=ISEED+1         
+         ISEED=ISEED+13557         
          CALL RANILS(ISEED)
 
          DO 100 ITRAJ=1,NTRAJ 
@@ -233,12 +256,12 @@ c             Q(3)=FENGEN()
 C
 
              IF(MODULO(ITRAJ,1000).EQ.0)THEN
-             WRITE(*,*) "STATUS : EQB.TIME-STEP WIDTH : ",DELTAT,
-     &"TRAJ # ",ITRAJ
+c             WRITE(*,*) "STATUS : EQB.TIME-STEP WIDTH : ",DELTAT,
+c     &"TRAJ # ",ITRAJ
              ENDIF
 c             WRITE(*,*) "EQUILIBRATION AT SR = ",SR 
 C            Relaxation of initial conditions
-             NEQB=1.D0/DELTAT
+             NEQB=40.D0/DELTAT
              DO 50 ITIME=1,NEQB
                 CALL SEMIMP(Q)
 50           CONTINUE
@@ -297,7 +320,15 @@ C             IF(IDT.EQ.NTIWID)THEN
 C                 WRITE(113,8) ITRAJ,Q1,Q2,Q3
 C             ENDIF
 C8            FORMAT(I8,4X,F16.12,4X,F16.12,4X,F16.12)
+
+             QMAG =Q(1)*Q(1) + Q(2)*Q(2) + Q(3)*Q(3)
+             QLEN=SQRT(QMAG)
+             J=(CEILING(QLEN/BSIZE))
+             P(J)=P(J)+(1.D0/(NTRAJ*BSIZE)) 
+
 100      CONTINUE 
+C
+C
 C 
 C        Averages, statistical errors 
 
@@ -358,13 +389,22 @@ C
 
       CALL CPU_TIME(ENDTIME)
 
+      DO 89 I=1,NBINS
+          A1=(I-1)*BSIZE
+          A2=I*BSIZE
+          A3=(A1+A2)/2.D0
+          WRITE(89,9) A1,A2,A3,P(I)
+          WRITE(*,9) A1,A2,A3,P(I)
+89    CONTINUE
+9     FORMAT(F6.2,4X,F6.2,4X,F6.2,4X,F12.8)
 
-      WRITE(*,*) "SHEAR RATE TO BE WRITTEN : ",SR
+
+c      WRITE(*,*) "SHEAR RATE TO BE WRITTEN : ",SR
 
 
       BACKSPACE (UNIT=1)
       WRITE (1,3) Z,RMU,B,SR,E,H0,THI,ENDTIME-STARTTIME
-3     FORMAT(F5.1,2X,F4.1,4X,F8.1,6X,F8.2,6X,F5.2,
+3     FORMAT(F5.1,2X,F4.1,4X,F8.1,6X,F6.2,6X,F5.2,
      &2X,F5.2,2X,F5.2,2X,F10.1)
       CLOSE (UNIT=1)
       close (unit=2) 
@@ -377,7 +417,7 @@ C
       CLOSE (UNIT=10)
       CLOSE (UNIT=89)
       CLOSE (UNIT=112)
-c1100  STOP
+1100  STOP
 
 C 
       open (unit=15, file='q2.dat')
@@ -810,7 +850,7 @@ C
 
 
 
-1100  STOP 
+c1100  STOP 
 
 
       END 

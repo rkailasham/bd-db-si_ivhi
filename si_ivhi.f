@@ -48,12 +48,8 @@ c
 c     NOTE : WHEN RUNNING EQUILIBRIUM SIMULATIONS, DIVERT PROGRAM
 c     FLOW FROM ENTERING TEXTRA. WHEN SR=0.0, MATERIAL FUNCTIONS BECOME UNDEFINED.
 C     THIS CREATES HAVOC WITH TEXTRA
-c
-c     NOTE : PROGRAM IN DOUBLE PRECISION, READS FROM GAUSSIAN 
-c     INITIAL CONFIGURATIONS. TEXTRA BUILT IN.
-c
 C
-c
+c     15-NOV-2017 : CREATING A DATABASE OF EQUILIBRATED FENE DUMBBELLS
 
 
 
@@ -104,8 +100,8 @@ C     THI = 2 FOR ROTNE-PRAGER-YAMAKAWA
       open (unit=8, file='tau.dat',STATUS='UNKNOWN')
       open (unit=9, file='tau_e.dat',STATUS='UNKNOWN')
       open (unit=10, file='tau_d.dat',STATUS='UNKNOWN')
-c      open (unit=112,file='log.dat',STATUS='UNKNOWN')
-C      open (unit=113, file='eqbconfigs150DT.dat',STATUS='UNKNOWN')
+      open (unit=112,file='log.dat',STATUS='UNKNOWN')
+      open (unit=113, file='eqbconfigs.dat',STATUS='UNKNOWN')
 c      OPEN (UNIT=89, file='bin_data.dat',STATUS='UNKNOWN')
 
       TMAX=10.D0
@@ -242,7 +238,7 @@ C
              ENDIF
 c             WRITE(*,*) "EQUILIBRATION AT SR = ",SR 
 C            Relaxation of initial conditions
-             NEQB=1.D0/DELTAT
+             NEQB=20.D0/DELTAT
              DO 50 ITIME=1,NEQB
                 CALL SEMIMP(Q)
 50           CONTINUE
@@ -267,40 +263,13 @@ C           Time integration: semi-implicit predictor-corrector scheme
                      TEMP23=(Q(2)*Q(2) - Q(3)*Q(3))
                      AVQ2(IOUT)=AVQ2(IOUT)+(QMAG)
                      ERQ2(IOUT)=ERQ2(IOUT)+(QMAG*QMAG)
-                     METD=(2.D0)*E*GEE3*SR*(Q(1)**(2.D0))*
-     &(Q(2)**(2.D0))/QMAG
-                     METE=((GEE3*Q(1)*Q(2))/(1.D0-(QMAG/B)))+
-     &(E*GEE4*Q(1)*Q(2)/QMAG)
-                     MET=METE+METD
-                     META=MET/SR
-
-                     MPSI1=((GEE3*TEMP12)/(1.D0-(QMAG/B)))+
-     &(2.D0*E*GEE3*SR*Q(1)*Q(2)*TEMP12/QMAG)+(E*GEE4*TEMP12/QMAG)
-                     MPSI1=(MPSI1)/(SR*SR)
-
-                     MPSI2=((GEE3*TEMP23)/(1.D0-(QMAG/B)))+
-     &(2.D0*E*GEE3*SR*Q(1)*Q(2)*TEMP23/QMAG)+(E*GEE4*TEMP23/QMAG)
-                     MPSI2=(MPSI2)/(SR*SR)
-
-                     AVTE(IOUT)=AVTE(IOUT)+METE
-                     ERTE(IOUT)=ERTE(IOUT)+(METE*METE)
-                     AVTD(IOUT)=AVTD(IOUT)+METD
-                     ERTD(IOUT)=ERTD(IOUT)+(METD*METD)
-                     AVT(IOUT)=AVT(IOUT)+MET
-                     ERT(IOUT)=ERT(IOUT)+(MET*MET)
-                     AVETA(IOUT)=AVETA(IOUT)+META
-                     ERETA(IOUT)=ERETA(IOUT) + (META*META)
-                     AVPSI1(IOUT)=AVPSI1(IOUT)+MPSI1
-                     ERPSI1(IOUT)=ERPSI1(IOUT)+(MPSI1*MPSI1)
-                     AVPSI2(IOUT)=AVPSI2(IOUT)+MPSI2
-                     ERPSI2(IOUT)=ERPSI2(IOUT)+(MPSI2*MPSI2)
-                 ENDIF
+                ENDIF
 10           CONTINUE 
 
-C             IF(IDT.EQ.NTIWID)THEN
-C                 WRITE(113,8) ITRAJ,Q1,Q2,Q3
-C             ENDIF
-C8            FORMAT(I8,4X,F16.12,4X,F16.12,4X,F16.12)
+             IF(IDT.EQ.NTIWID)THEN
+                 WRITE(113,8) ITRAJ,Q(1),Q(2),Q(3)
+             ENDIF
+8            FORMAT(I10,4X,F20.16,4X,F20.16,4X,F20.16)
 100      CONTINUE 
 C 
 C        Averages, statistical errors 
@@ -312,48 +281,10 @@ C        Averages, statistical errors
              ERQ2(I)=(ERQ2(I)-AVQ2(I)*AVQ2(I))/(NTRAJ-1)
              ERQ2(I)=SQRT(ERQ2(I))
 
-             AVPSI1(I)=AVPSI1(I)/NTRAJ
-             ERPSI1(I)=ERPSI1(I)/NTRAJ
-             ERPSI1(I)=(ERPSI1(I)-AVPSI1(I)*AVPSI1(I))/(NTRAJ-1)
-             ERPSI1(I)=SQRT(ERPSI1(I))
-         
-             AVETA(I)=AVETA(I)/NTRAJ
-             ERETA(I)=ERETA(I)/NTRAJ
-             ERETA(I)=(ERETA(I)-AVETA(I)*AVETA(I))/(NTRAJ-1)
-             ERETA(I)=SQRT(ERETA(I))
-
-             AVPSI2(I)=AVPSI2(I)/NTRAJ
-             ERPSI2(I)=ERPSI2(I)/NTRAJ
-             ERPSI2(I)=(ERPSI2(I)-AVPSI2(I)*AVPSI2(I))/(NTRAJ-1)
-             ERPSI2(I)=SQRT(ERPSI2(I))
-
-             AVT(I)=AVT(I)/NTRAJ
-             ERT(I)=ERT(I)/NTRAJ
-             ERT(I)=(ERT(I)-AVT(I)*AVT(I))/(NTRAJ-1)
-             ERT(I)=SQRT(ERT(I))
-    
-             AVTD(I)=AVTD(I)/NTRAJ
-             ERTD(I)=ERTD(I)/NTRAJ
-             ERTD(I)=(ERTD(I)-AVTD(I)*AVTD(I))/(NTRAJ-1)
-             ERTD(I)=SQRT(ERTD(I))
-         
-             AVTE(I)=AVTE(I)/NTRAJ
-             ERTE(I)=ERTE(I)/NTRAJ
-             ERTE(I)=(ERTE(I)-AVTE(I)*AVTE(I))/(NTRAJ-1)
-             ERTE(I)=SQRT(ERTE(I))
-
-
              OUTIME1=NTIME*I*DELTAT
 c        Output of results 
-             WRITE(3,4) DELTAT,OUTIME1,AVETA(I),ERETA(I)
-             WRITE(4,4) DELTAT,OUTIME1,AVPSI1(I),ERPSI1(I)
-             WRITE(5,4) DELTAT,OUTIME1,AVPSI2(I),ERPSI2(I)
-             WRITE(7,4)  DELTAT,OUTIME1,AVQ2(I),ERQ2(I)
+            WRITE(7,4)  DELTAT,OUTIME1,AVQ2(I),ERQ2(I)
 c             WRITE(7,*)  DELTAT,OUTIME,AVQ2(I),ERQ2(I),SIGSQ(I) 
-             WRITE(8,4)  DELTAT,OUTIME1,AVT(I),ERT(I)
-c             WRITE(*,1)  DELTAT,OUTIME,AVT(I),ERT(I)
-             WRITE(9,4)  DELTAT,OUTIME1,AVTE(I),ERTE(I)
-             WRITE(10,4) DELTAT,OUTIME1,AVTD(I),ERTD(I)
 35       CONTINUE
 c1        FORMAT(F11.8,4X,F6.2,2X,F16.5,2X,F16.5)
 4        FORMAT(F11.8,4X,F10.5,4X,F24.12,4X,F24.12) 
@@ -368,7 +299,7 @@ C
 
       BACKSPACE (UNIT=1)
       WRITE (1,3) Z,RMU,B,SR,E,H0,THI,ENDTIME-STARTTIME
-3     FORMAT(F5.1,2X,F4.1,4X,F8.1,6X,F8.2,6X,F5.2,
+3     FORMAT(F5.1,2X,F4.1,4X,F8.1,6X,F6.2,6X,F5.2,
      &2X,F5.2,2X,F5.2,2X,F10.1)
       CLOSE (UNIT=1)
       close (unit=2) 
@@ -381,7 +312,8 @@ C
       CLOSE (UNIT=10)
       CLOSE (UNIT=89)
       CLOSE (UNIT=112)
-c1100  STOP
+      CLOSE (UNIT=113)
+1100  STOP
 
 C 
       open (unit=15, file='q2.dat')
@@ -814,7 +746,7 @@ C
 
 
 
-1100  STOP 
+c1100  STOP 
 
 
       END 
@@ -898,7 +830,7 @@ C     RES=S-B=A-r
      &-(E*ALPHA*(RES)*AMPL2/Y))
       GEE3=AMPL2/BETA
       GEE4=((2.D0*AMPL2*AMPL2*ALPHA*S)/(BETA*BETA*Y1))+(3.D0*AMPL2)
- 
+33    FORMAT(F20.16)
       RETURN
       END
 

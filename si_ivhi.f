@@ -49,7 +49,7 @@ c     NOTE : WHEN RUNNING EQUILIBRIUM SIMULATIONS, DIVERT PROGRAM
 c     FLOW FROM ENTERING TEXTRA. WHEN SR=0.0, MATERIAL FUNCTIONS BECOME UNDEFINED.
 C     THIS CREATES HAVOC WITH TEXTRA
 C
-c     13-NOV-2017 : CALCULATING P(Q) VS Q FOR THE CONFIGURATIONS WHICH HAVE BEEN PICKED
+c     17-NOV-2017 : CALCULATING P(Q) VS Q FOR THE CONFIGURATIONS WHICH HAVE BEEN PICKED
 c     FROM THE EQUILIBRATED FENE DATABASE
 c
 
@@ -84,12 +84,14 @@ c
       INTEGER NTIARR(10) 
       INTEGER TIME (8)
       CHARACTER (LEN=12) CLK(3)
+      CHARACTER (LEN=512) FPATH
       PARAMETER(FPATH="/home/rkailasham/Sdrive/Desktop/Kailash_Files/Com
      &bined_Code_Validation/equilibrated_database/eqbconfigs.dat")
       COMMON /STEPBL/ THI,B,ZMU,RMU2,BAUXQ,BAUXR,DTH,DTQ,SRDT,
      &SRDTH,C1P,C2P,E,AMPL2,BETA,AB,A2,A4,AUX1,AUX2,
      &AUX3,AUX4,AUX5,S,QALPH,GEE1,GEE2,GEE3,GEE4 
       COMMON /EXTRP/ NOPT,NDUOPT,XOPT,YOPT,SIGOPT,ALIOPT,VLIOPT 
+      LOGICAL THERE
 c      INTEGER :: THI
 C     Excluded-volume and FENE parameters 
 c     Z = Solvent Quality, RMU = EV parameter, B= FENE parameter
@@ -109,9 +111,8 @@ C     THI = 2 FOR ROTNE-PRAGER-YAMAKAWA
       open (unit=8, file='tau.dat',STATUS='UNKNOWN')
       open (unit=9, file='tau_e.dat',STATUS='UNKNOWN')
       open (unit=10, file='tau_d.dat',STATUS='UNKNOWN')
-c      open (unit=112,file='log.dat',STATUS='UNKNOWN')
-C      open (unit=113, file='eqbconfigs150DT.dat',STATUS='UNKNOWN')
       OPEN (UNIT=89, file='bin_data.dat',STATUS='UNKNOWN')
+      INQUIRE (FILE=FPATH,EXIST=THERE)
 
       TMAX=10.D0
       READ (2,*) NTIWID, NTRAJ
@@ -189,7 +190,27 @@ c      WRITE(*,*) "TEMPB , PREFAC : ",TEMPB, FENFAC
 c      WRITE(*,*) "AMPL2 : ",AMPL2
 C     Loop for different time step widths 
       ISEED=20171113
+      NSEED=ISEED+1
+      CALL SRAND(NSEED)
+ 
       CALL CPU_TIME(STARTTIME)
+
+      IF(THERE)THEN
+          OPEN(UNIT=114,file=FPATH)
+          WRITE(*,*) "LOADING DATABASE.."
+          DO 12 I=1,NDB
+              READ(114,8) K,DB(I,1),DB(I,2),DB(I,3)
+12        CONTINUE
+          CLOSE(UNIT=114)
+      ELSE
+          STOP "eqbconfigs.dat file not found. Execution terminated"
+      ENDIF
+
+8     FORMAT(I10,4X,F20.16,4X,F20.16,4X,F20.16)
+
+      WRITE(*,*) "LOADED DATABASE"
+
+
 
       DO 1000 IDT=1,NTIWID
 C        Auxiliary parameters 
@@ -249,15 +270,17 @@ C        write (*,*) ISEED
              SR=0.D0
              SRDT=SR*DELTAT
              SRDTH=0.5D0*SRDT
-C            Gaussian distributed initial conditions  
-             Q(1)=RANGLS()
-             Q(2)=RANGLS()
-             Q(3)=RANGLS()
+C            Initial Conditions Taken from memory  
 
-c             Q(1)=FENGEN()
-c             Q(2)=FENGEN()
-c             Q(3)=FENGEN()
-C
+             PICK=RAND()
+             NSEED=NSEED+1
+             CHANGE=NDB*PICK
+             NCHOOSE=NINT(CHANGE)
+
+             Q(1)=DB(NCHOOSE,1)
+             Q(2)=DB(NCHOOSE,2)
+             Q(3)=DB(NCHOOSE,3)
+
 
              IF(MODULO(ITRAJ,1000).EQ.0)THEN
 c             WRITE(*,*) "STATUS : EQB.TIME-STEP WIDTH : ",DELTAT,
@@ -265,10 +288,10 @@ c     &"TRAJ # ",ITRAJ
              ENDIF
 c             WRITE(*,*) "EQUILIBRATION AT SR = ",SR 
 C            Relaxation of initial conditions
-             NEQB=40.D0/DELTAT
-             DO 50 ITIME=1,NEQB
-                CALL SEMIMP(Q)
-50           CONTINUE
+c             NEQB=0.D0/DELTAT
+c             DO 50 ITIME=1,NEQB
+c                CALL SEMIMP(Q)
+c50           CONTINUE
 C 
              SR=SRTEMP
              SRDT=SR*DELTAT
@@ -279,47 +302,47 @@ c             WRITE(*,*) "PRODUCTION AT SR = ",SR
              IOUT=0
 C
 C           Time integration: semi-implicit predictor-corrector scheme 
-             DO 10 ITIME=1,NTIARR(IDT) 
-                 CALL SEMIMP(Q) 
-                 IWAIT=IWAIT+1
-                 IF (IWAIT.EQ.NTIME) THEN
-                     IWAIT=0
-                     IOUT=IOUT+1
-                     QMAG =Q(1)*Q(1) + Q(2)*Q(2) + Q(3)*Q(3)
-                     TEMP12=(Q(1)*Q(1) - Q(2)*Q(2))
-                     TEMP23=(Q(2)*Q(2) - Q(3)*Q(3))
-                     AVQ2(IOUT)=AVQ2(IOUT)+(QMAG)
-                     ERQ2(IOUT)=ERQ2(IOUT)+(QMAG*QMAG)
-                     METD=(2.D0)*E*GEE3*SR*(Q(1)**(2.D0))*
-     &(Q(2)**(2.D0))/QMAG
-                     METE=((GEE3*Q(1)*Q(2))/(1.D0-(QMAG/B)))+
-     &(E*GEE4*Q(1)*Q(2)/QMAG)
-                     MET=METE+METD
-                     META=MET/SR
-
-                     MPSI1=((GEE3*TEMP12)/(1.D0-(QMAG/B)))+
-     &(2.D0*E*GEE3*SR*Q(1)*Q(2)*TEMP12/QMAG)+(E*GEE4*TEMP12/QMAG)
-                     MPSI1=(MPSI1)/(SR*SR)
-
-                     MPSI2=((GEE3*TEMP23)/(1.D0-(QMAG/B)))+
-     &(2.D0*E*GEE3*SR*Q(1)*Q(2)*TEMP23/QMAG)+(E*GEE4*TEMP23/QMAG)
-                     MPSI2=(MPSI2)/(SR*SR)
-
-                     AVTE(IOUT)=AVTE(IOUT)+METE
-                     ERTE(IOUT)=ERTE(IOUT)+(METE*METE)
-                     AVTD(IOUT)=AVTD(IOUT)+METD
-                     ERTD(IOUT)=ERTD(IOUT)+(METD*METD)
-                     AVT(IOUT)=AVT(IOUT)+MET
-                     ERT(IOUT)=ERT(IOUT)+(MET*MET)
-                     AVETA(IOUT)=AVETA(IOUT)+META
-                     ERETA(IOUT)=ERETA(IOUT) + (META*META)
-                     AVPSI1(IOUT)=AVPSI1(IOUT)+MPSI1
-                     ERPSI1(IOUT)=ERPSI1(IOUT)+(MPSI1*MPSI1)
-                     AVPSI2(IOUT)=AVPSI2(IOUT)+MPSI2
-                     ERPSI2(IOUT)=ERPSI2(IOUT)+(MPSI2*MPSI2)
-                 ENDIF
-10           CONTINUE 
-
+c             DO 10 ITIME=1,NTIARR(IDT) 
+c                 CALL SEMIMP(Q) 
+c                 IWAIT=IWAIT+1
+c                 IF (IWAIT.EQ.NTIME) THEN
+c                     IWAIT=0
+c                     IOUT=IOUT+1
+c                     QMAG =Q(1)*Q(1) + Q(2)*Q(2) + Q(3)*Q(3)
+c                     TEMP12=(Q(1)*Q(1) - Q(2)*Q(2))
+c                     TEMP23=(Q(2)*Q(2) - Q(3)*Q(3))
+c                     AVQ2(IOUT)=AVQ2(IOUT)+(QMAG)
+c                     ERQ2(IOUT)=ERQ2(IOUT)+(QMAG*QMAG)
+c                     METD=(2.D0)*E*GEE3*SR*(Q(1)**(2.D0))*
+c     &(Q(2)**(2.D0))/QMAG
+c                     METE=((GEE3*Q(1)*Q(2))/(1.D0-(QMAG/B)))+
+c     &(E*GEE4*Q(1)*Q(2)/QMAG)
+c                     MET=METE+METD
+c                     META=MET/SR
+c
+c                     MPSI1=((GEE3*TEMP12)/(1.D0-(QMAG/B)))+
+c     &(2.D0*E*GEE3*SR*Q(1)*Q(2)*TEMP12/QMAG)+(E*GEE4*TEMP12/QMAG)
+c                     MPSI1=(MPSI1)/(SR*SR)
+c
+c                     MPSI2=((GEE3*TEMP23)/(1.D0-(QMAG/B)))+
+c     &(2.D0*E*GEE3*SR*Q(1)*Q(2)*TEMP23/QMAG)+(E*GEE4*TEMP23/QMAG)
+c                     MPSI2=(MPSI2)/(SR*SR)
+c
+c                     AVTE(IOUT)=AVTE(IOUT)+METE
+c                     ERTE(IOUT)=ERTE(IOUT)+(METE*METE)
+c                     AVTD(IOUT)=AVTD(IOUT)+METD
+c                     ERTD(IOUT)=ERTD(IOUT)+(METD*METD)
+c                     AVT(IOUT)=AVT(IOUT)+MET
+c                     ERT(IOUT)=ERT(IOUT)+(MET*MET)
+c                     AVETA(IOUT)=AVETA(IOUT)+META
+c                     ERETA(IOUT)=ERETA(IOUT) + (META*META)
+c                     AVPSI1(IOUT)=AVPSI1(IOUT)+MPSI1
+c                     ERPSI1(IOUT)=ERPSI1(IOUT)+(MPSI1*MPSI1)
+c                     AVPSI2(IOUT)=AVPSI2(IOUT)+MPSI2
+c                     ERPSI2(IOUT)=ERPSI2(IOUT)+(MPSI2*MPSI2)
+c                 ENDIF
+c10           CONTINUE 
+c
 C             IF(IDT.EQ.NTIWID)THEN
 C                 WRITE(113,8) ITRAJ,Q1,Q2,Q3
 C             ENDIF

@@ -84,6 +84,8 @@ c
       INTEGER NTIARR(10) 
       INTEGER TIME (8)
       CHARACTER (LEN=12) CLK(3)
+      PARAMETER(FPATH="/home/rkailasham/Sdrive/Desktop/Kailash_Files/Com
+     &bined_Code_Validation/equilibrated_database/eqbconfigs.dat")
       COMMON /STEPBL/ THI,B,ZMU,RMU2,BAUXQ,BAUXR,DTH,DTQ,SRDT,
      &SRDTH,C1P,C2P,E,AMPL2,BETA,AB,A2,A4,AUX1,AUX2,
      &AUX3,AUX4,AUX5,S,QALPH,GEE1,GEE2,GEE3,GEE4 

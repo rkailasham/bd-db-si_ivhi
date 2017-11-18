@@ -190,7 +190,7 @@ c      WRITE(*,*) "TEMPB , PREFAC : ",TEMPB, FENFAC
 c      WRITE(*,*) "AMPL2 : ",AMPL2
 C     Loop for different time step widths 
       ISEED=20171113
-      NSEED=ISEED+1
+      NSEED=ISEED+42
       CALL SRAND(NSEED)
  
       CALL CPU_TIME(STARTTIME)

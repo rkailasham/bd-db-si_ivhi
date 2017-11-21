@@ -70,7 +70,7 @@ c
 
 
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
-      PARAMETER (NDATM=50,NOUT=100) 
+      PARAMETER (NDATM=50,NOUT=1) 
       PARAMETER (NBINS=50)
       PARAMETER (NDB=10000000)
       REAL*8 FENFAC,TEMPB
@@ -127,7 +127,7 @@ c      open (unit=112,file='log.dat',STATUS='UNKNOWN')
 C      open (unit=113, file='eqbconfigs150DT.dat',STATUS='UNKNOWN')
 c      OPEN (UNIT=89, file='bin_data.dat',STATUS='UNKNOWN')
 
-      TMAX=10.D0
+      TMAX=1.D0
       READ (2,*) NTIWID, NTRAJ
       DO 15 I = 1, NTIWID
           READ (2,*) NTIARR(I)
@@ -213,7 +213,8 @@ c         OPEN(UNIT=114,file=FPATH)
          WRITE(*,*) "DOING TIMESTEP WIDTH : ",DTARR(IDT)
          DELTAT=DTARR(IDT) 
          TEMPDT=DELTAT
-         NTIME=NTIARR(IDT)/NOUT
+c         NTIME=NTIARR(IDT)/NOUT
+         NTIME=1
          DTH=0.5D0*DELTAT 
          DTQ=0.25D0*DELTAT 
          SQDT=SQRT(DELTAT) 

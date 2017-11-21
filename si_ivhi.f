@@ -304,7 +304,7 @@ C           Time integration: semi-implicit predictor-corrector scheme
              DO 10 ITIME=1,NTIARR(IDT) 
                  CALL SEMIMP(Q) 
                  IWAIT=IWAIT+1
-                 IF (IWAIT.EQ.NTIME) THEN
+                 IF (IWAIT.EQ.1) THEN
                      IWAIT=0
                      IOUT=IOUT+1
                      QMAG =Q(1)*Q(1) + Q(2)*Q(2) + Q(3)*Q(3)
@@ -339,6 +339,8 @@ C           Time integration: semi-implicit predictor-corrector scheme
                      ERPSI1(IOUT)=ERPSI1(IOUT)+(MPSI1*MPSI1)
                      AVPSI2(IOUT)=AVPSI2(IOUT)+MPSI2
                      ERPSI2(IOUT)=ERPSI2(IOUT)+(MPSI2*MPSI2)
+                     EXIT
+                     WRITE(*,*) "ITIME : ",ITIME 
                  ENDIF
 10           CONTINUE 
 
@@ -428,7 +430,7 @@ C
       CLOSE (UNIT=89)
       CLOSE (UNIT=112)
 C      CLOSE (UNIT=114)
-c1100  STOP
+1100  STOP
 
 C 
       open (unit=15, file='q2.dat')
@@ -863,7 +865,7 @@ C
 
 
 
-1100  STOP 
+c1100  STOP 
 
 
       END 

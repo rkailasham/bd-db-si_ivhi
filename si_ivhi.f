@@ -55,7 +55,10 @@ C     EQUILIBRATED FENE DUMBBELLS (B=100 ONLY!!!)
 c
 c     22-NOV-2017 : TRYING TO APPLY GREENKUBO TO FIND STRESS JUMP
 c
-
+c     NOTE : IMPLEMENTING G(t)=<SXY(0)SXY(0+)>
+c
+c     23-NOV-2017 : CHANGING DEFINITION OF G(t)=<SXY(0+)SXY(0+)>
+c
 
 
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
@@ -326,7 +329,7 @@ C           Time integration: semi-implicit predictor-corrector scheme
                      METE=((GEE3*Q(1)*Q(2))/(1.D0-(QMAG/B)))+
      &(E*GEE4*Q(1)*Q(2)/QMAG)
                      MET=METE+METD
-                     MEGP=MET*SXY0
+                     MEGP=MET*MET
 
                      AVT(IOUT)=AVT(IOUT)+MET
                      ERT(IOUT)=ERT(IOUT)+(MET*MET)

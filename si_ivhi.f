@@ -53,13 +53,13 @@ c     17-NOV-2017 : IMPLEMENTING GREEN-KUBO ANALYSIS
 c     THIS PROGRAM READS INITIAL CONFIGS FROM A DATABASE OF 
 C     EQUILIBRATED FENE DUMBBELLS (B=100 ONLY!!!)
 c
-c
+c     22-NOV-2017 : TRYING TO APPLY GREENKUBO TO FIND STRESS JUMP
 c
 
 
 
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
-      PARAMETER (NDATM=50,NOUT=100) 
+      PARAMETER (NDATM=50,NOUT=1) 
       PARAMETER (NBINS=50)
       PARAMETER (NDB=10000000)
       REAL*8 FENFAC,TEMPB
@@ -209,7 +209,8 @@ C        Auxiliary parameters
          WRITE(*,*) "DOING TIMESTEP WIDTH : ",DTARR(IDT)
          DELTAT=DTARR(IDT) 
          TEMPDT=DELTAT
-         NTIME=NTIARR(IDT)/NOUT
+c         NTIME=NTIARR(IDT)/NOUT
+         NTIME=1
          DTH=0.5D0*DELTAT 
          DTQ=0.25D0*DELTAT 
          SQDT=SQRT(DELTAT) 
@@ -312,7 +313,7 @@ C           Time integration: semi-implicit predictor-corrector scheme
              DO 10 ITIME=1,NTIARR(IDT) 
                  CALL SEMIMP(Q) 
                  IWAIT=IWAIT+1
-                 IF (IWAIT.EQ.NTIME) THEN
+                 IF (IWAIT.EQ.1) THEN
                      IWAIT=0
                      IOUT=IOUT+1
                      QMAG =Q(1)*Q(1) + Q(2)*Q(2) + Q(3)*Q(3)
@@ -332,7 +333,8 @@ C           Time integration: semi-implicit predictor-corrector scheme
 
                      AVGP(IOUT)=AVGP(IOUT)+MEGP
                      ERGP(IOUT)=ERGP(IOUT)+MEGP*MEGP
-
+                     EXIT
+                     WRITE(*,*) "ITIME : ",ITIME 
                 ENDIF
 10           CONTINUE 
 
@@ -400,7 +402,7 @@ C
       CLOSE (UNIT=11)
       CLOSE (UNIT=89)
       CLOSE (UNIT=112)
-c1100  STOP
+1100  STOP
 
 C 
       open (unit=17, file='q2.dat')
@@ -619,7 +621,7 @@ C
       close (unit=1)
       close (unit=2)
 
-1100  STOP 
+C1100  STOP 
 
 
       END 

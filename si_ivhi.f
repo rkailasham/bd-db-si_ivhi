@@ -61,7 +61,7 @@ c
 
 
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
-      PARAMETER (NDATM=50,NOUT=100) 
+      PARAMETER (NDATM=50,NOUT=1) 
       PARAMETER (NBINS=50)
       PARAMETER (NDB=10000000)
       REAL*8 P(NBINS)
@@ -118,7 +118,7 @@ C     THI = 2 FOR ROTNE-PRAGER-YAMAKAWA
       OPEN (UNIT=89, file='bin_data.dat',STATUS='UNKNOWN')
       INQUIRE (FILE=FPATH,EXIST=THERE)
 
-      TMAX=10.D0
+      TMAX=1.D0
       READ (2,*) NTIWID, NTRAJ
       DO 15 I = 1, NTIWID
           READ (2,*) NTIARR(I)
@@ -221,7 +221,8 @@ C        Auxiliary parameters
 c         WRITE(*,*) "DOING TIMESTEP WIDTH : ",DTARR(IDT)
          DELTAT=DTARR(IDT) 
          TEMPDT=DELTAT
-         NTIME=NTIARR(IDT)/NOUT
+c         NTIME=NTIARR(IDT)/NOUT
+         NTIME=1
          DTH=0.5D0*DELTAT 
          DTQ=0.25D0*DELTAT 
          SQDT=SQRT(DELTAT) 
@@ -306,51 +307,48 @@ c             WRITE(*,*) "PRODUCTION AT SR = ",SR
              IOUT=0
 C
 C           Time integration: semi-implicit predictor-corrector scheme 
-c             DO 10 ITIME=1,NTIARR(IDT) 
-c                 CALL SEMIMP(Q) 
-c                 IWAIT=IWAIT+1
-c                 IF (IWAIT.EQ.NTIME) THEN
-c                     IWAIT=0
-c                     IOUT=IOUT+1
-c                     QMAG =Q(1)*Q(1) + Q(2)*Q(2) + Q(3)*Q(3)
-c                     TEMP12=(Q(1)*Q(1) - Q(2)*Q(2))
-c                     TEMP23=(Q(2)*Q(2) - Q(3)*Q(3))
-c                     AVQ2(IOUT)=AVQ2(IOUT)+(QMAG)
-c                     ERQ2(IOUT)=ERQ2(IOUT)+(QMAG*QMAG)
-c                     METD=(2.D0)*E*GEE3*SR*(Q(1)**(2.D0))*
-c     &(Q(2)**(2.D0))/QMAG
-c                     METE=((GEE3*Q(1)*Q(2))/(1.D0-(QMAG/B)))+
-c     &(E*GEE4*Q(1)*Q(2)/QMAG)
-c                     MET=METE+METD
-c                     META=MET/SR
-c
-c                     MPSI1=((GEE3*TEMP12)/(1.D0-(QMAG/B)))+
-c     &(2.D0*E*GEE3*SR*Q(1)*Q(2)*TEMP12/QMAG)+(E*GEE4*TEMP12/QMAG)
-c                     MPSI1=(MPSI1)/(SR*SR)
-c
-c                     MPSI2=((GEE3*TEMP23)/(1.D0-(QMAG/B)))+
-c     &(2.D0*E*GEE3*SR*Q(1)*Q(2)*TEMP23/QMAG)+(E*GEE4*TEMP23/QMAG)
-c                     MPSI2=(MPSI2)/(SR*SR)
-c
-c                     AVTE(IOUT)=AVTE(IOUT)+METE
-c                     ERTE(IOUT)=ERTE(IOUT)+(METE*METE)
-c                     AVTD(IOUT)=AVTD(IOUT)+METD
-c                     ERTD(IOUT)=ERTD(IOUT)+(METD*METD)
-c                     AVT(IOUT)=AVT(IOUT)+MET
-c                     ERT(IOUT)=ERT(IOUT)+(MET*MET)
-c                     AVETA(IOUT)=AVETA(IOUT)+META
-c                     ERETA(IOUT)=ERETA(IOUT) + (META*META)
-c                     AVPSI1(IOUT)=AVPSI1(IOUT)+MPSI1
-c                     ERPSI1(IOUT)=ERPSI1(IOUT)+(MPSI1*MPSI1)
-c                     AVPSI2(IOUT)=AVPSI2(IOUT)+MPSI2
-c                     ERPSI2(IOUT)=ERPSI2(IOUT)+(MPSI2*MPSI2)
-c                 ENDIF
-c10           CONTINUE 
-c
-C             IF(IDT.EQ.NTIWID)THEN
-C                 WRITE(113,8) ITRAJ,Q1,Q2,Q3
-C             ENDIF
-C8            FORMAT(I8,4X,F16.12,4X,F16.12,4X,F16.12)
+             DO 10 ITIME=1,NTIARR(IDT) 
+                 CALL SEMIMP(Q) 
+                 IWAIT=IWAIT+1
+                 IF (IWAIT.EQ.1) THEN
+                     IWAIT=0
+                     IOUT=IOUT+1
+                     QMAG =Q(1)*Q(1) + Q(2)*Q(2) + Q(3)*Q(3)
+                     TEMP12=(Q(1)*Q(1) - Q(2)*Q(2))
+                     TEMP23=(Q(2)*Q(2) - Q(3)*Q(3))
+                     AVQ2(IOUT)=AVQ2(IOUT)+(QMAG)
+                     ERQ2(IOUT)=ERQ2(IOUT)+(QMAG*QMAG)
+                     METD=(2.D0)*E*GEE3*SR*(Q(1)**(2.D0))*
+     &(Q(2)**(2.D0))/QMAG
+                     METE=((GEE3*Q(1)*Q(2))/(1.D0-(QMAG/B)))+
+     &(E*GEE4*Q(1)*Q(2)/QMAG)
+                     MET=METE+METD
+                     META=MET/SR
+
+                     MPSI1=((GEE3*TEMP12)/(1.D0-(QMAG/B)))+
+     &(2.D0*E*GEE3*SR*Q(1)*Q(2)*TEMP12/QMAG)+(E*GEE4*TEMP12/QMAG)
+                     MPSI1=(MPSI1)/(SR*SR)
+
+                     MPSI2=((GEE3*TEMP23)/(1.D0-(QMAG/B)))+
+     &(2.D0*E*GEE3*SR*Q(1)*Q(2)*TEMP23/QMAG)+(E*GEE4*TEMP23/QMAG)
+                     MPSI2=(MPSI2)/(SR*SR)
+
+                     AVTE(IOUT)=AVTE(IOUT)+METE
+                     ERTE(IOUT)=ERTE(IOUT)+(METE*METE)
+                     AVTD(IOUT)=AVTD(IOUT)+METD
+                     ERTD(IOUT)=ERTD(IOUT)+(METD*METD)
+                     AVT(IOUT)=AVT(IOUT)+MET
+                     ERT(IOUT)=ERT(IOUT)+(MET*MET)
+                     AVETA(IOUT)=AVETA(IOUT)+META
+                     ERETA(IOUT)=ERETA(IOUT) + (META*META)
+                     AVPSI1(IOUT)=AVPSI1(IOUT)+MPSI1
+                     ERPSI1(IOUT)=ERPSI1(IOUT)+(MPSI1*MPSI1)
+                     AVPSI2(IOUT)=AVPSI2(IOUT)+MPSI2
+                     ERPSI2(IOUT)=ERPSI2(IOUT)+(MPSI2*MPSI2)
+                     EXIT
+                     WRITE(*,*) "ITIME : ",ITIME
+                 ENDIF
+10           CONTINUE 
 
              QMAG =Q(1)*Q(1) + Q(2)*Q(2) + Q(3)*Q(3)
              QLEN=SQRT(QMAG)

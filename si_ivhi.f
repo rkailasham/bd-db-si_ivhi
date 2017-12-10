@@ -171,14 +171,45 @@ C
       SELECT CASE (INPAR)
           CASE (1)
               WRITE(*,*) "INPAR : ",INPAR
-              WRITE(*,*) "READING FROM EQUILIBRATED DATABASE.."
+              IF(THERE)THEN
+                  OPEN(UNIT=114,file=FPATH)
+                  WRITE(*,*) "LOADING FROM EQUILIBRATED DATABASE.."
+                  DO 12 I=1,NDB
+                      READ(114,8) K,DB(I,1),DB(I,2),DB(I,3)
+12                CONTINUE
+                  CLOSE(UNIT=114)
+              ELSE
+                  STOP "eqbconfigs.dat file not found. Execution 
+     &terminated"
+              ENDIF  
+              WRITE(*,*) "LOADED DATABASE"
           CASE (2)
               WRITE(*,*) "INPAR : ",INPAR
+              IF(CTHERE)THEN
+                  OPEN(UNIT=115,file=CPATH)
+                  WRITE(*,*) "READING FROM FINAL CONFIGS OF PREVIOUS 
+     &RUN.."
+C                 WRITE(*,*) "LOADING PROD DATABASE.."
+C                 DO 13 I=1,NDB
+C                     READ(114,8) K,DB(I,1),DB(I,2),DB(I,3)
+C13               CONTINUE
+                  CLOSE(UNIT=115)
+              ELSE
+                  STOP "finconfigs.dat file not found. Execution 
+     &terminated"
+              ENDIF
+
+
+
+
+
+
+
               WRITE(*,*) "READING FROM FINAL CONFIGS OF PREVIOUS RUN.."
           CASE DEFAULT
               WRITE(*,*) "READ_FROM_INPUT OPTION NOT VALID"
-              WRITE(*,*) "SETTING INPAR=1"
-              WRITE(*,*) "WILL READ FROM EQUILIBRATED DATABASE"
+              STOP "USE INPAR=1 FOR EQB DBASE, INPAR=2 FOR RESUMING 
+     &FROM PREVIOUS RUN"
       END SELECT
 
 
@@ -203,17 +234,6 @@ C     Loop for different time step widths
       NSEED=ISEED+1
       CALL SRAND(NSEED)
       CALL CPU_TIME(STARTTIME)
-
-      IF(THERE)THEN
-          OPEN(UNIT=114,file=FPATH)
-          WRITE(*,*) "LOADING DATABASE.."
-          DO 12 I=1,NDB
-              READ(114,8) K,DB(I,1),DB(I,2),DB(I,3)
-12        CONTINUE
-          CLOSE(UNIT=114)
-      ELSE
-          STOP "eqbconfigs.dat file not found. Execution terminated" 
-      ENDIF
 
       IF(CTHERE)THEN
           OPEN(UNIT=115,file=CPATH)
@@ -288,8 +308,8 @@ C     -ESPONDING MATL. FNS.
 C        A FRESH SEED IS GIVEN FOR EACH TIME-STEP WIDTH
 C        TO ENSURE NON-OCCURENCE OF PERIOD EXHAUSTION
 
-c         CALL DATE_AND_TIME(CLK(1),CLK(2),CLK(3),TIME)
-c         ISEED=TIME(8)*100000+TIME(7)*1000+TIME(6)*10+TIME(5)
+         CALL DATE_AND_TIME(CLK(1),CLK(2),CLK(3),TIME)
+         ISEED=TIME(8)*100000+TIME(7)*1000+TIME(6)*10+TIME(5)
 C        write (*,*) ISEED 
          ISEED=ISEED+1         
          CALL RANILS(ISEED)
@@ -447,7 +467,7 @@ C
       BACKSPACE (UNIT=1)
       WRITE (1,3) Z,RMU,B,SR,E,H0,THI,INPAR,ENDTIME-STARTTIME
 3     FORMAT(F5.1,2X,F4.1,4X,F8.1,6X,F8.2,6X,F5.2,
-     &2X,F5.2,2X,F5.2,2X,I1,2X,F10.1)
+     &2X,F5.2,2X,F5.2,4X,I1,4X,F10.1)
       CLOSE (UNIT=1)
       close (unit=2) 
       CLOSE (unit=3)

@@ -332,7 +332,6 @@ C           Time integration: semi-implicit predictor-corrector scheme
 10           CONTINUE 
 
              WRITE(112,8) ITRAJ,Q(1),Q(2),Q(3)
-8            FORMAT(I10,4X,F20.16,4X,F20.16,4X,F20.16)
 100      CONTINUE 
 C 
 C        Averages, statistical errors 

@@ -331,7 +331,8 @@ C           Time integration: semi-implicit predictor-corrector scheme
                  ENDIF
 10           CONTINUE 
 
-             WRITE(112,8) ITRAJ,Q(1),Q(2),Q(3)
+             WRITE(112,9) DELTAT,Q(1),Q(2),Q(3)
+9            FORMAT(F11.8,4X,F20.16,4X,F20.16,4X,F20.16)
 100      CONTINUE 
 C 
 C        Averages, statistical errors 

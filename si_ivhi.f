@@ -189,23 +189,14 @@ C
                   OPEN(UNIT=115,file=CPATH)
                   WRITE(*,*) "READING FROM FINAL CONFIGS OF PREVIOUS 
      &RUN.."
-C                 WRITE(*,*) "LOADING PROD DATABASE.."
-C                 DO 13 I=1,NDB
-C                     READ(114,8) K,DB(I,1),DB(I,2),DB(I,3)
-C13               CONTINUE
+                  DO 13 I=1,(3*NTRAJ)
+                      READ(115,9) TIMEI,DB(I,1),DB(I,2),DB(I,3)
+13                CONTINUE
                   CLOSE(UNIT=115)
               ELSE
                   STOP "finconfigs.dat file not found. Execution 
      &terminated"
               ENDIF
-
-
-
-
-
-
-
-              WRITE(*,*) "READING FROM FINAL CONFIGS OF PREVIOUS RUN.."
           CASE DEFAULT
               WRITE(*,*) "READ_FROM_INPUT OPTION NOT VALID"
               STOP "USE INPAR=1 FOR EQB DBASE, INPAR=2 FOR RESUMING 
@@ -235,27 +226,10 @@ C     Loop for different time step widths
       CALL SRAND(NSEED)
       CALL CPU_TIME(STARTTIME)
 
-      IF(CTHERE)THEN
-          OPEN(UNIT=115,file=CPATH)
-          WRITE(*,*) "YAY..PROD FIN CONFIG FOUND"
-C          WRITE(*,*) "LOADING PROD DATABASE.."
-C          DO 13 I=1,NDB
-C              READ(114,8) K,DB(I,1),DB(I,2),DB(I,3)
-C13        CONTINUE
-          CLOSE(UNIT=115)
-      ELSE
-          STOP "finconfigs.dat file not found. Execution terminated" 
-      ENDIF
-
-
-
-
-
 
 
 8     FORMAT(I10,4X,F20.16,4X,F20.16,4X,F20.16)
 
-      WRITE(*,*) "LOADED DATABASE"
 
 
 
@@ -327,7 +301,11 @@ C
              PICK=RAND()
              NSEED=NSEED+1
              CHANGE=NDB*PICK
-             NCHOOSE=NINT(CHANGE)
+             IF(INPAR.EQ.1)THEN
+                 NCHOOSE=NINT(CHANGE)
+             ELSE
+                 NCHOOSE=((IDT-1)*NTRAJ)+(ITRAJ)
+             ENDIF 
              Q(1)=DB(NCHOOSE,1)
              Q(2)=DB(NCHOOSE,2)
              Q(3)=DB(NCHOOSE,3)

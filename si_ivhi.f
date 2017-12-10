@@ -97,13 +97,17 @@ c
       INTEGER TIME (8)
       CHARACTER (LEN=12) CLK(3)
       CHARACTER (LEN=512) FPATH
+      CHARACTER (LEN=512) CPATH
       PARAMETER(FPATH="/home/rkailasham/Sdrive/Desktop/Kailash_Files/Com
      &bined_Code_Validation/equilibrated_database/eqbconfigs.dat")
+      PARAMETER(CPATH="/home/rkailasham/Sdrive/Desktop/Kailash_Files/fin
+     &configs.dat")
       COMMON /STEPBL/ THI,B,ZMU,RMU2,BAUXQ,BAUXR,DTH,DTQ,SRDT,
      &SRDTH,C1P,C2P,E,AMPL2,BETA,AB,A2,A4,AUX1,AUX2,
      &AUX3,AUX4,AUX5,S,QALPH,GEE1,GEE2,GEE3,GEE4 
       COMMON /EXTRP/ NOPT,NDUOPT,XOPT,YOPT,SIGOPT,ALIOPT,VLIOPT 
       LOGICAL THERE
+      LOGICAL CTHERE
 c      INTEGER :: THI
 C     Excluded-volume and FENE parameters 
 c     Z = Solvent Quality, RMU = EV parameter, B= FENE parameter
@@ -114,7 +118,7 @@ C     BE USED OFR THE HYDRODYNAMIC INTERACTION TENSOR.
 C     THI = 1 FOR REGULARIZED OSEEN-BURGER
 C     THI = 2 FOR ROTNE-PRAGER-YAMAKAWA 
       open (unit=1, file='inp.dat') 
-      READ (1,*) Z, RMU, B, SR,E,H0,THI 
+      READ (1,*) Z, RMU, B, SR,E,H0,THI,INPAR 
       open (unit=2, file='tstep.dat') 
       open (unit=3, file='eta.dat',STATUS='UNKNOWN') 
       open (unit=4, file='psi1.dat',STATUS='UNKNOWN')
@@ -124,6 +128,7 @@ C     THI = 2 FOR ROTNE-PRAGER-YAMAKAWA
       open (unit=9, file='tau_e.dat',STATUS='UNKNOWN')
       open (unit=10, file='tau_d.dat',STATUS='UNKNOWN')
       INQUIRE (FILE=FPATH,EXIST=THERE)
+      INQUIRE (FILE=FPATH,EXIST=CTHERE)
       open (unit=112,file='finconfigs.dat',STATUS='UNKNOWN')
 C      open (unit=113, file='eqbconfigs150DT.dat',STATUS='UNKNOWN')
 c      OPEN (UNIT=89, file='bin_data.dat',STATUS='UNKNOWN')
@@ -162,6 +167,27 @@ C
               H0=0.D0
       END SELECT
 
+
+      SELECT CASE (INPAR)
+          CASE (1)
+              WRITE(*,*) "INPAR : ",INPAR
+              WRITE(*,*) "READING FROM EQUILIBRATED DATABASE.."
+          CASE (2)
+              WRITE(*,*) "INPAR : ",INPAR
+              WRITE(*,*) "READING FROM FINAL CONFIGS OF PREVIOUS RUN.."
+          CASE DEFAULT
+              WRITE(*,*) "READ_FROM_INPUT OPTION NOT VALID"
+              WRITE(*,*) "SETTING INPAR=1"
+              WRITE(*,*) "WILL READ FROM EQUILIBRATED DATABASE"
+      END SELECT
+
+
+
+
+
+
+
+
       PI=3.1415926535897931D0
       AB=SQRT(PI)*H0
       A2=AB*AB
@@ -188,6 +214,24 @@ C     Loop for different time step widths
       ELSE
           STOP "eqbconfigs.dat file not found. Execution terminated" 
       ENDIF
+
+      IF(CTHERE)THEN
+          OPEN(UNIT=115,file=CPATH)
+          WRITE(*,*) "YAY..PROD FIN CONFIG FOUND"
+C          WRITE(*,*) "LOADING PROD DATABASE.."
+C          DO 13 I=1,NDB
+C              READ(114,8) K,DB(I,1),DB(I,2),DB(I,3)
+C13        CONTINUE
+          CLOSE(UNIT=115)
+      ELSE
+          STOP "finconfigs.dat file not found. Execution terminated" 
+      ENDIF
+
+
+
+
+
+
 
 8     FORMAT(I10,4X,F20.16,4X,F20.16,4X,F20.16)
 
@@ -401,9 +445,9 @@ C
       WRITE(112,23) ISEED
 
       BACKSPACE (UNIT=1)
-      WRITE (1,3) Z,RMU,B,SR,E,H0,THI,ENDTIME-STARTTIME
+      WRITE (1,3) Z,RMU,B,SR,E,H0,THI,INPAR,ENDTIME-STARTTIME
 3     FORMAT(F5.1,2X,F4.1,4X,F8.1,6X,F8.2,6X,F5.2,
-     &2X,F5.2,2X,F5.2,2X,F10.1)
+     &2X,F5.2,2X,F5.2,2X,I1,2X,F10.1)
       CLOSE (UNIT=1)
       close (unit=2) 
       CLOSE (unit=3)

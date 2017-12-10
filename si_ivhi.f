@@ -167,6 +167,7 @@ C
               H0=0.D0
       END SELECT
 
+      CALL CPU_TIME(STARTTIME)
 
       SELECT CASE (INPAR)
           CASE (1)
@@ -224,7 +225,6 @@ C     Loop for different time step widths
       ISEED=20171113
       NSEED=ISEED+1
       CALL SRAND(NSEED)
-      CALL CPU_TIME(STARTTIME)
 
 
 

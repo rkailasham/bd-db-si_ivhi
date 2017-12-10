@@ -63,7 +63,10 @@ c     ARRAY. PROGRAM EXECUTION OVERHEAD OF 30s.
 c     CHANGE FPATH ACCORDING TO PLATFORM
 c
 c     18-NOV-2017 : CHANGING PARAMETERS BEING WRITTEN TO TEXTRA OUTPUT
-
+c
+c     10-DEC-2017 : Writing configurations at the end of simulation run;
+c     so that I can continue where I left off
+c
 
 
 
@@ -121,7 +124,7 @@ C     THI = 2 FOR ROTNE-PRAGER-YAMAKAWA
       open (unit=9, file='tau_e.dat',STATUS='UNKNOWN')
       open (unit=10, file='tau_d.dat',STATUS='UNKNOWN')
       INQUIRE (FILE=FPATH,EXIST=THERE)
-c      open (unit=112,file='log.dat',STATUS='UNKNOWN')
+      open (unit=112,file='finconfigs.dat',STATUS='UNKNOWN')
 C      open (unit=113, file='eqbconfigs150DT.dat',STATUS='UNKNOWN')
 c      OPEN (UNIT=89, file='bin_data.dat',STATUS='UNKNOWN')
 
@@ -168,19 +171,7 @@ C
       WRITE(*,45) H0
 
 
-c1100  STOP
-C     PREFACTOR ACC TO EQN (23) OF JNNFM 1995, SCHIEBER
-
-c      TEMPB=((B+2.)/2.)
-c      FENFAC=1./(2.*PI*(B**1.5)*betafn(1.5,TEMPB))
-c      WRITE(*,*) "GAMM LN : ",gammln(TEMPB)
-c      WRITE(*,*) "BETA ANS : ",betafn(1.5,TEMPB)
-c      WRITE(*,*) "TEMPB , PREFAC : ",TEMPB, FENFAC      
-    
-
-
-
-c      WRITE(*,*) "AMPL2 : ",AMPL2
+   
 C     Loop for different time step widths 
       ISEED=20171113
       NSEED=ISEED+1
@@ -340,10 +331,8 @@ C           Time integration: semi-implicit predictor-corrector scheme
                  ENDIF
 10           CONTINUE 
 
-C             IF(IDT.EQ.NTIWID)THEN
-C                 WRITE(113,8) ITRAJ,Q1,Q2,Q3
-C             ENDIF
-C8            FORMAT(I8,4X,F16.12,4X,F16.12,4X,F16.12)
+             WRITE(112,8) ITRAJ,Q(1),Q(2),Q(3)
+8            FORMAT(I10,4X,F20.16,4X,F20.16,4X,F20.16)
 100      CONTINUE 
 C 
 C        Averages, statistical errors 
@@ -901,7 +890,6 @@ C
       SELECT CASE(NTHI)
 C     FOR REGULARIZED OSEEN BURGERS          
           CASE(1)
-c          WRITE(112,*) "IN ROB"
               AUX1=Y+C43*A2
               AUX4=Y**(3.D0)+C143*A2*Y*Y+8.D0*A4*Y
               AUX5=Y**(3.D0)+2.D0*A2*Y*Y-C83*A4*Y
@@ -914,7 +902,6 @@ c          WRITE(112,*) "IN ROB"
               S=0.5D0*(AUXD3-AUXD2)
 c     FOR RPY CASE      
           CASE(2)
-c          WRITE(112,*) "IN RPY"
               COMP=Y1/(2.D0*AB)
               COMPD=2.D0*COMP
               COMPI=1.D0/(COMPD) 
@@ -927,7 +914,6 @@ c          WRITE(112,*) "IN RPY"
               ENDIF  
               S=AUX3
           CASE DEFAULT
-c          WRITE(112,*) "NOPE"
               AUX1=Y
               AUX2=1.D0 
               AUX3=1.D0 
@@ -986,8 +972,6 @@ C      WRITE(*,*) "AUX4 : ",AUX4
 C      WRITE(*,*) "AUX5 : ",AUX5
 
 
-c      WRITE(112,*) "QL AFTER FIRST HISET CALL : ",QL
-c      WRITE(112,*) "AMPL2 B4 PRED SECTION : ",AMPL2
       HF=(1.D0)/(1.D0-(QL/B)) 
       GT=-(GEE2*DTH/SQQL)
       KH=(E*AMPL2*Q(1)*Q(2)*SRDT)/QL 
@@ -1053,14 +1037,11 @@ c     Better to do this through function calls.
 
 
       GTAUX=-(GEE2*DTQ/SQAUXQL)
-c      WRITE(112,*) "IVAUX : ",IVAUX
-c      WRITE(112,*) "GTAUX : ",GTAUX
       KAUX=(E*AMPL2*SRDTH*QAUX1*QAUX2)/QAUXL
       HEAUX=-DTQ*AMPL2*ZMU*EXP(-QAUXL/RMU2)
       T4=GTAUX+KAUX+HEAUX 
       T3=1.D0-T4
 
-c      WRITE(112,*) "AMPL2 BEFORE CORRECTOR : ",AMPL2
 
 C     Corrector step 
       Q(1)=T3*QAUX1+(SRDTH*(QAUX2-Q(2)))+0.5D0*T0*Q(1)

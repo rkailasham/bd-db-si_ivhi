@@ -186,6 +186,7 @@ C
                   STOP "eqbconfigs.dat file not found. Execution 
      &terminated"
               ENDIF  
+              ISEED=20171113              
               WRITE(*,*) "LOADED DATABASE"
           CASE (2)
               WRITE(*,*) "INPAR : ",INPAR
@@ -196,6 +197,7 @@ C
                   DO 13 I=1,(3*NTRAJ)
                       READ(115,9) TIMEI,DB(I,1),DB(I,2),DB(I,3)
 13                CONTINUE
+                  READ(115,*) ISEED
                   CLOSE(UNIT=115)
               ELSE
                   STOP "finconfigs.dat file not found. Execution 
@@ -225,9 +227,7 @@ C
 
    
 C     Loop for different time step widths 
-      ISEED=20171113
-      NSEED=ISEED+1
-      CALL SRAND(NSEED)
+      CALL SRAND(ISEED)
 
 
 
@@ -285,10 +285,10 @@ C     -ESPONDING MATL. FNS.
 C        A FRESH SEED IS GIVEN FOR EACH TIME-STEP WIDTH
 C        TO ENSURE NON-OCCURENCE OF PERIOD EXHAUSTION
 
-         CALL DATE_AND_TIME(CLK(1),CLK(2),CLK(3),TIME)
+c         CALL DATE_AND_TIME(CLK(1),CLK(2),CLK(3),TIME)
 c         ISEED=TIME(8)*100000+TIME(7)*1000+TIME(6)*10+TIME(5)
 C        write (*,*) ISEED 
-         ISEED=ISEED+1         
+C         ISEED=ISEED+1         
          CALL RANILS(ISEED)
 
          DO 100 ITRAJ=1,NTRAJ 

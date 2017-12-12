@@ -194,7 +194,8 @@ C
                   OPEN(UNIT=115,file=CPATH)
                   WRITE(*,*) "READING FROM FINAL CONFIGS OF PREVIOUS 
      &RUN.."
-                  DO 13 I=1,(3*NTRAJ)
+c                 NTIWID=3
+                  DO 13 I=1,(NTIWID*NTRAJ)
                       READ(115,9) TIMEI,DB(I,1),DB(I,2),DB(I,3)
 13                CONTINUE
                   READ(115,*) ISEED

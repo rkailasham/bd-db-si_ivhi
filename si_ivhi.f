@@ -130,7 +130,6 @@ C     THI = 2 FOR ROTNE-PRAGER-YAMAKAWA
       open (unit=10, file='tau_d.dat',STATUS='UNKNOWN')
       INQUIRE (FILE=FPATH,EXIST=THERE)
       INQUIRE (FILE=FPATH,EXIST=CTHERE)
-      open (unit=112,file='finconfigs.dat',STATUS='UNKNOWN')
 C      open (unit=113, file='eqbconfigs150DT.dat',STATUS='UNKNOWN')
 c      OPEN (UNIT=89, file='bin_data.dat',STATUS='UNKNOWN')
 
@@ -243,7 +242,7 @@ C     Loop for different time step widths
 
 
 
-
+      open (unit=112,file='finconfigs.dat',STATUS='UNKNOWN')
 c      CALL CPU_TIME(STARTTIME)
       DO 1000 IDT=1,NTIWID
 C        Auxiliary parameters 

@@ -93,6 +93,7 @@ c
       REAL*8 OUTIME(NOUT)
       REAL*8 Q(3)
       REAL*8 DB(NDB,3)
+      REAL*8 EQBFAC
       INTEGER NTIARR(10) 
       INTEGER TIME (8)
       CHARACTER (LEN=12) CLK(3)
@@ -187,6 +188,9 @@ C
      &terminated"
               ENDIF  
               ISEED=20171113              
+c             Equilibrate for 1 dimensionless time if picking initial configs from
+c             database
+              EQBFAC=1.D0
               WRITE(*,*) "LOADED DATABASE"
           CASE (2)
               WRITE(*,*) "INPAR : ",INPAR
@@ -204,6 +208,9 @@ c                 NTIWID=3
                   STOP "finconfigs.dat file not found. Execution 
      &terminated"
               ENDIF
+c             Start from where things ended if reading from previous configs.
+c             Don't equilibrate
+              EQBFAC=0.D0
           CASE DEFAULT
               WRITE(*,*) "READ_FROM_INPUT OPTION NOT VALID"
               STOP "USE INPAR=1 FOR EQB DBASE, INPAR=2 FOR RESUMING 

@@ -129,7 +129,7 @@ C     THI = 2 FOR ROTNE-PRAGER-YAMAKAWA
       open (unit=9, file='tau_e.dat',STATUS='UNKNOWN')
       open (unit=10, file='tau_d.dat',STATUS='UNKNOWN')
       INQUIRE (FILE=FPATH,EXIST=THERE)
-      INQUIRE (FILE=FPATH,EXIST=CTHERE)
+      INQUIRE (FILE=CPATH,EXIST=CTHERE)
 C      open (unit=113, file='eqbconfigs150DT.dat',STATUS='UNKNOWN')
 c      OPEN (UNIT=89, file='bin_data.dat',STATUS='UNKNOWN')
 
@@ -328,7 +328,7 @@ C
              ENDIF
 c             WRITE(*,*) "EQUILIBRATION AT SR = ",SR 
 C            Relaxation of initial conditions
-             NEQB=1.D0/DELTAT
+             NEQB=EQBFAC/DELTAT
              DO 50 ITIME=1,NEQB
                 CALL SEMIMP(Q)
 50           CONTINUE
@@ -440,7 +440,7 @@ c             WRITE(*,1)  DELTAT,OUTIME,AVT(I),ERT(I)
              WRITE(10,4) DELTAT,OUTIME1,AVTD(I),ERTD(I)
 35       CONTINUE
 c1        FORMAT(F11.8,4X,F6.2,2X,F16.5,2X,F16.5)
-4        FORMAT(F11.8,4X,F10.5,4X,F24.12,4X,F24.12) 
+4        FORMAT(F11.8,4X,F10.5,4X,F30.12,4X,F30.12) 
 c         CLOSE(UNIT=114)
 1000  CONTINUE 
 C 
